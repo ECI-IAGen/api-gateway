@@ -253,15 +253,19 @@ class ApiClient {
     }
 
     async getSubmissionsByAssignment(assignmentId) {
-        return this.makeRequest(`/submissions/by-assignment/${assignmentId}`);
+        return this.makeRequest(`/submissions/assignment/${assignmentId}`);
     }
 
     async getSubmissionsByTeam(teamId) {
-        return this.makeRequest(`/submissions/by-team/${teamId}`);
+        return this.makeRequest(`/submissions/team/${teamId}`);
     }
 
     async getSubmissionsByUser(userId) {
-        return this.makeRequest(`/submissions/by-user/${userId}`);
+        return this.makeRequest(`/submissions/user/${userId}`);
+    }
+
+    async getSubmissionByAssignmentAndTeam(assignmentId, teamId) {
+        return this.makeRequest(`/submissions/assignment/${assignmentId}/team/${teamId}`);
     }
 
     // EVALUACIONES

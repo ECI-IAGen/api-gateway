@@ -26,7 +26,7 @@ public class Submission {
     @JoinColumn(name = "team_id", nullable = false)
     private Team team;
     
-    @Column(name = "submitted_at", nullable = false)
+    @Column(name = "submitted_at", nullable = true)
     private LocalDateTime submittedAt;
     
     @Column(name = "file_url")

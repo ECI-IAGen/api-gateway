@@ -14,6 +14,30 @@ class App {
         this.init();
     }
 
+    // Función helper para convertir fechas del backend
+    parseBackendDate(dateValue) {
+        if (!dateValue) return null;
+        
+        // Si es un array [year, month, day, hour, minute]
+        if (Array.isArray(dateValue) && dateValue.length >= 3) {
+            const [year, month, day, hour = 0, minute = 0, second = 0] = dateValue;
+            // JavaScript months are 0-based, backend sends 1-based
+            return new Date(year, month - 1, day, hour, minute, second);
+        }
+        
+        // Si es un string ISO
+        if (typeof dateValue === 'string') {
+            return new Date(dateValue);
+        }
+        
+        // Si es un objeto Date
+        if (dateValue instanceof Date) {
+            return dateValue;
+        }
+        
+        return null;
+    }
+
     init() {
         // Cargar usuarios por defecto
         this.showSection('users');
@@ -192,18 +216,50 @@ class App {
         tbody.innerHTML = '';
 
         assignments.forEach(assignment => {
-            const dueDate = assignment.dueDate ? new Date(assignment.dueDate).toLocaleString() : 'Sin fecha límite';
+            const startDateObj = this.parseBackendDate(assignment.startDate);
+            const dueDateObj = this.parseBackendDate(assignment.dueDate);
+            
+            const startDate = startDateObj ? startDateObj.toLocaleString('es-ES') : 'Sin fecha de inicio';
+            const dueDate = dueDateObj ? dueDateObj.toLocaleString('es-ES') : 'Sin fecha límite';
+            
+            // Determinar el estado de la asignación
+            const now = new Date();
+            const start = startDateObj;
+            const due = dueDateObj;
+            
+            let statusBadge = '';
+            if (start && due) {
+                if (now < start) {
+                    statusBadge = '<span class="badge bg-secondary">Próxima</span>';
+                } else if (now >= start && now <= due) {
+                    statusBadge = '<span class="badge bg-success">Activa</span>';
+                } else {
+                    statusBadge = '<span class="badge bg-danger">Vencida</span>';
+                }
+            }
+            
             const row = `
                 <tr>
                     <td>${assignment.id}</td>
-                    <td>${assignment.title}</td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <span class="me-2">${assignment.title}</span>
+                            ${statusBadge}
+                        </div>
+                    </td>
                     <td class="text-truncate" title="${assignment.description || ''}">${assignment.description || 'Sin descripción'}</td>
-                    <td>${dueDate}</td>
+                    <td>
+                        <small class="text-muted">Inicio:</small><br>${startDate}<br>
+                        <small class="text-muted">Límite:</small><br>${dueDate}
+                    </td>
                     <td class="action-buttons">
-                        <button class="btn btn-sm btn-outline-primary" onclick="app.editAssignment(${assignment.id})">
+                        <button class="btn btn-sm btn-outline-info" onclick="app.viewAssignment(${assignment.id})" title="Ver detalles">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="app.editAssignment(${assignment.id})" title="Editar asignación">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="app.deleteAssignment(${assignment.id})">
+                        <button class="btn btn-sm btn-outline-danger" onclick="app.deleteAssignment(${assignment.id})" title="Eliminar asignación">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
@@ -219,19 +275,36 @@ class App {
         tbody.innerHTML = '';
 
         submissions.forEach(submission => {
-            const submittedAt = submission.submittedAt ? new Date(submission.submittedAt).toLocaleString() : 'Sin fecha';
+            const submittedAtObj = this.parseBackendDate(submission.submittedAt);
+            const submittedAt = submittedAtObj ? submittedAtObj.toLocaleString('es-ES') : 'Sin fecha';
+            
+            // Mostrar URL del archivo de forma resumida
+            const fileUrlText = submission.fileUrl ? 
+                (submission.fileUrl.length > 30 ? submission.fileUrl.substring(0, 30) + '...' : submission.fileUrl) :
+                'Sin archivo';
+            
             const row = `
                 <tr>
                     <td>${submission.id}</td>
-                    <td>${submission.assignment ? submission.assignment.title : 'Sin asignación'}</td>
-                    <td>${submission.team ? submission.team.name : 'Sin equipo'}</td>
-                    <td class="text-truncate" title="${submission.content || ''}">${submission.content || 'Sin contenido'}</td>
+                    <td>${submission.assignmentTitle || 'Sin asignación'}</td>
+                    <td>${submission.teamName || 'Sin equipo'}</td>
+                    <td>
+                        ${submission.fileUrl ? 
+                            `<a href="${submission.fileUrl}" target="_blank" class="text-truncate" title="${submission.fileUrl}">
+                                <i class="fas fa-external-link-alt me-1"></i>${fileUrlText}
+                            </a>` : 
+                            'Sin archivo'
+                        }
+                    </td>
                     <td>${submittedAt}</td>
                     <td class="action-buttons">
-                        <button class="btn btn-sm btn-outline-primary" onclick="app.editSubmission(${submission.id})">
+                        <button class="btn btn-sm btn-outline-info" onclick="app.viewSubmission(${submission.id})" title="Ver detalles">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="app.editSubmission(${submission.id})" title="Editar entrega">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="app.deleteSubmission(${submission.id})">
+                        <button class="btn btn-sm btn-outline-danger" onclick="app.deleteSubmission(${submission.id})" title="Eliminar entrega">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
@@ -247,7 +320,8 @@ class App {
         tbody.innerHTML = '';
 
         evaluations.forEach(evaluation => {
-            const evaluatedAt = evaluation.evaluatedAt ? new Date(evaluation.evaluatedAt).toLocaleString() : 'Sin fecha';
+            const evaluatedAtObj = this.parseBackendDate(evaluation.evaluatedAt);
+            const evaluatedAt = evaluatedAtObj ? evaluatedAtObj.toLocaleString('es-ES') : 'Sin fecha';
             const row = `
                 <tr>
                     <td>${evaluation.id}</td>
@@ -275,7 +349,8 @@ class App {
         tbody.innerHTML = '';
 
         feedbacks.forEach(feedback => {
-            const createdAt = feedback.createdAt ? new Date(feedback.createdAt).toLocaleString() : 'Sin fecha';
+            const createdAtObj = this.parseBackendDate(feedback.createdAt);
+            const createdAt = createdAtObj ? createdAtObj.toLocaleString('es-ES') : 'Sin fecha';
             const row = `
                 <tr>
                     <td>${feedback.id}</td>
@@ -557,12 +632,228 @@ class App {
         };
     }
 
-    showCreateAssignmentModal() {
-        this.showNotification('Funcionalidad de crear asignación en desarrollo', 'info');
+    async showCreateAssignmentModal() {
+        // Modal HTML para crear asignación
+        const modalHtml = `
+        <div class="modal fade" id="createAssignmentModal" tabindex="-1">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-tasks me-2"></i>Crear Asignación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <form id="create-assignment-form">
+                <div class="modal-body">
+                  <div class="mb-3">
+                    <label class="form-label">Título *</label>
+                    <input type="text" class="form-control" name="title" required 
+                           placeholder="Ingrese el título de la asignación" />
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">Descripción</label>
+                    <textarea class="form-control" name="description" rows="3"
+                              placeholder="Descripción detallada de la asignación"></textarea>
+                  </div>
+                  <div class="row">
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label class="form-label">Fecha de Inicio *</label>
+                        <input type="datetime-local" class="form-control" name="startDate" required />
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label class="form-label">Fecha Límite *</label>
+                        <input type="datetime-local" class="form-control" name="dueDate" required />
+                      </div>
+                    </div>
+                  </div>
+                  <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    La fecha de inicio debe ser anterior a la fecha límite.
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                  <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Crear Asignación
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>`;
+
+        // Insertar modal y mostrarlo
+        document.getElementById('modals-container').innerHTML = modalHtml;
+        const modal = new bootstrap.Modal(document.getElementById('createAssignmentModal'));
+        modal.show();
+
+        // Establecer fechas por defecto (ahora y en 7 días)
+        const now = new Date();
+        const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        
+        const startDateInput = document.querySelector('input[name="startDate"]');
+        const dueDateInput = document.querySelector('input[name="dueDate"]');
+        
+        startDateInput.value = now.toISOString().slice(0, 16);
+        dueDateInput.value = nextWeek.toISOString().slice(0, 16);
+
+        // Manejar submit
+        document.getElementById('create-assignment-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const title = form.title.value.trim();
+            const description = form.description.value.trim();
+            const startDate = form.startDate.value;
+            const dueDate = form.dueDate.value;
+
+            if (!title || !startDate || !dueDate) {
+                this.showNotification('Título, fecha de inicio y fecha límite son obligatorios', 'error');
+                return;
+            }
+
+            // Validar que la fecha de inicio sea anterior a la fecha límite
+            if (new Date(startDate) >= new Date(dueDate)) {
+                this.showNotification('La fecha de inicio debe ser anterior a la fecha límite', 'error');
+                return;
+            }
+
+            // Construir objeto asignación
+            const assignment = {
+                title,
+                description: description || null,
+                startDate,
+                dueDate
+            };
+
+            try {
+                await apiClient.createAssignment(assignment);
+                modal.hide();
+                this.showNotification('Asignación creada correctamente');
+                this.loadSectionData('assignments');
+            } catch (err) {
+                this.showNotification('Error al crear asignación: ' + err.message, 'error');
+            }
+        };
     }
 
-    showCreateSubmissionModal() {
-        this.showNotification('Funcionalidad de crear entrega en desarrollo', 'info');
+    async showCreateSubmissionModal() {
+        try {
+            // Obtener asignaciones y equipos para los selects
+            const assignments = this.loadedData.assignments.length ? this.loadedData.assignments : await apiClient.getAssignments();
+            const teams = this.loadedData.teams.length ? this.loadedData.teams : await apiClient.getTeams();
+
+            // Modal HTML para crear entrega
+            const modalHtml = `
+            <div class="modal fade" id="createSubmissionModal" tabindex="-1">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-file-upload me-2"></i>Crear Entrega</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <form id="create-submission-form">
+                    <div class="modal-body">
+                      <div class="row">
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label class="form-label">Asignación *</label>
+                            <select class="form-select" name="assignmentId" required>
+                              <option value="">Seleccione una asignación</option>
+                              ${assignments.map(a => `<option value="${a.id}">${a.title}</option>`).join('')}
+                            </select>
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label class="form-label">Equipo *</label>
+                            <select class="form-select" name="teamId" required>
+                              <option value="">Seleccione un equipo</option>
+                              ${teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">URL del Archivo *</label>
+                        <input type="url" class="form-control" name="fileUrl" required 
+                               placeholder="https://example.com/mi-archivo.pdf" />
+                        <div class="form-text">Ingrese la URL donde está alojado el archivo de la entrega</div>
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">Fecha de Entregaee</label>
+                        <input type="datetime-local" class="form-control" name="submittedAt" />
+                        <div class="form-text">Déjelo vacío para usar la fecha actual</div>
+                      </div>
+                      <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Asegúrese de que el archivo esté accesible públicamente en la URL proporcionada.
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                      <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Crear Entrega
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>`;
+
+            // Insertar modal y mostrarlo
+            document.getElementById('modals-container').innerHTML = modalHtml;
+            const modal = new bootstrap.Modal(document.getElementById('createSubmissionModal'));
+            modal.show();
+
+            // Establecer fecha actual por defecto
+            const now = new Date();
+            const submittedAtInput = document.querySelector('input[name="submittedAt"]');
+            submittedAtInput.value = now.toISOString().slice(0, 16);
+
+            // Manejar submit
+            document.getElementById('create-submission-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const assignmentId = parseInt(form.assignmentId.value);
+                const teamId = parseInt(form.teamId.value);
+                const fileUrl = form.fileUrl.value.trim();
+                const submittedAt = form.submittedAt.value;
+
+                if (!assignmentId || !teamId || !fileUrl) {
+                    this.showNotification('Por favor complete todos los campos obligatorios', 'error');
+                    return;
+                }
+
+                try {
+                    // Preparar datos para enviar
+                    const submissionData = {
+                        assignmentId: assignmentId,
+                        teamId: teamId,
+                        fileUrl: fileUrl
+                    };
+
+                    // Solo enviar fecha si se especificó
+                    if (submittedAt) {
+                        submissionData.submittedAt = submittedAt;
+                    }
+
+                    const newSubmission = await apiClient.createSubmission(submissionData);
+                    this.showNotification('Entrega creada exitosamente', 'success');
+                    modal.hide();
+                    
+                    // Recargar datos si estamos en la sección de entregas
+                    if (this.currentSection === 'submissions') {
+                        this.loadSectionData('submissions');
+                    }
+                } catch (error) {
+                    this.showNotification('Error al crear la entrega: ' + error.message, 'error');
+                }
+            };
+        } catch (error) {
+            this.showNotification('Error al cargar datos para el modal: ' + error.message, 'error');
+        }
     }
 
     showCreateEvaluationModal() {
@@ -1182,9 +1473,347 @@ class App {
             this.showNotification('Error al cargar datos del equipo: ' + error.message, 'error');
         }
     }
-    editAssignment(id) { this.showNotification(`Editar asignación ${id} - En desarrollo`, 'info'); }
-    editSchedule(id) { this.showNotification(`Editar horario ${id} - En desarrollo`, 'info'); }
-    editSubmission(id) { this.showNotification(`Editar entrega ${id} - En desarrollo`, 'info'); }
+    async editAssignment(id) {
+        try {
+            // Obtener la asignación actual
+            const assignment = await apiClient.getAssignmentById(id);
+            
+            if (!assignment) {
+                this.showNotification('Asignación no encontrada', 'error');
+                return;
+            }
+
+            // Formatear fechas para el input datetime-local
+            const formatDateForInput = (dateValue) => {
+                const date = this.parseBackendDate(dateValue);
+                if (!date) return '';
+                return date.toISOString().slice(0, 16);
+            };
+
+            // Modal HTML para editar asignación
+            const modalHtml = `
+            <div class="modal fade" id="editAssignmentModal" tabindex="-1">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Editar Asignación</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                  </div>
+                  <form id="edit-assignment-form">
+                    <div class="modal-body">
+                      <div class="mb-3">
+                        <label class="form-label">Título *</label>
+                        <input type="text" class="form-control" name="title" required 
+                               value="${assignment.title || ''}"
+                               placeholder="Ingrese el título de la asignación" />
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea class="form-control" name="description" rows="3"
+                                  placeholder="Descripción detallada de la asignación">${assignment.description || ''}</textarea>
+                      </div>
+                      <div class="row">
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label class="form-label">Fecha de Inicio *</label>
+                            <input type="datetime-local" class="form-control" name="startDate" required 
+                                   value="${formatDateForInput(assignment.startDate)}" />
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label class="form-label">Fecha Límite *</label>
+                            <input type="datetime-local" class="form-control" name="dueDate" required 
+                                   value="${formatDateForInput(assignment.dueDate)}" />
+                          </div>
+                        </div>
+                      </div>
+                      <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        La fecha de inicio debe ser anterior a la fecha límite.
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                      <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Actualizar Asignación
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>`;
+
+            // Insertar modal y mostrarlo
+            document.getElementById('modals-container').innerHTML = modalHtml;
+            const modal = new bootstrap.Modal(document.getElementById('editAssignmentModal'));
+            modal.show();
+
+            // Manejar submit
+            document.getElementById('edit-assignment-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const title = form.title.value.trim();
+                const description = form.description.value.trim();
+                const startDate = form.startDate.value;
+                const dueDate = form.dueDate.value;
+
+                if (!title || !startDate || !dueDate) {
+                    this.showNotification('Título, fecha de inicio y fecha límite son obligatorios', 'error');
+                    return;
+                }
+
+                // Validar que la fecha de inicio sea anterior a la fecha límite
+                if (new Date(startDate) >= new Date(dueDate)) {
+                    this.showNotification('La fecha de inicio debe ser anterior a la fecha límite', 'error');
+                    return;
+                }
+
+                // Construir objeto asignación
+                const updatedAssignment = {
+                    id: assignment.id,
+                    title,
+                    description: description || null,
+                    startDate,
+                    dueDate
+                };
+
+                try {
+                    await apiClient.updateAssignment(id, updatedAssignment);
+                    modal.hide();
+                    this.showNotification('Asignación actualizada correctamente');
+                    this.loadSectionData('assignments');
+                } catch (err) {
+                    this.showNotification('Error al actualizar asignación: ' + err.message, 'error');
+                }
+            };
+
+        } catch (error) {
+            this.showNotification('Error al cargar datos de la asignación: ' + error.message, 'error');
+        }
+    }
+
+    // Método para ver detalles de entrega
+    async viewSubmission(id) {
+        try {
+            const submission = await apiClient.getSubmissionById(id);
+            
+            if (!submission) {
+                this.showNotification('Entrega no encontrada', 'error');
+                return;
+            }
+
+            // Formatear fecha
+            const formatDate = (dateValue) => {
+                const date = this.parseBackendDate(dateValue);
+                if (!date) return 'No especificada';
+                return date.toLocaleString('es-ES', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            };
+
+            // Modal HTML para ver entrega
+            const modalHtml = `
+            <div class="modal fade" id="viewSubmissionModal" tabindex="-1">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">
+                      <i class="fas fa-file-upload me-2"></i>Detalles de la Entrega #${submission.id}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="row">
+                      <div class="col-md-6">
+                        <div class="mb-3">
+                          <label class="form-label fw-bold">ID de la Entrega</label>
+                          <p class="form-control-plaintext">${submission.id}</p>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="mb-3">
+                          <label class="form-label fw-bold">Fecha de Entrega</label>
+                          <p class="form-control-plaintext">${formatDate(submission.submittedAt)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col-md-6">
+                        <div class="mb-3">
+                          <label class="form-label fw-bold">Asignación</label>
+                          <p class="form-control-plaintext">${submission.assignmentTitle || 'Sin asignación'}</p>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="mb-3">
+                          <label class="form-label fw-bold">Equipo</label>
+                          <p class="form-control-plaintext">${submission.teamName || 'Sin equipo'}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label fw-bold">Archivo de la Entrega</label>
+                      ${submission.fileUrl ? 
+                        `<div class="input-group">
+                          <input type="text" class="form-control" value="${submission.fileUrl}" readonly>
+                          <button class="btn btn-outline-primary" type="button" onclick="window.open('${submission.fileUrl}', '_blank')">
+                            <i class="fas fa-external-link-alt me-1"></i>Abrir
+                          </button>
+                        </div>` :
+                        '<p class="form-control-plaintext text-muted">Sin archivo</p>'
+                      }
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="app.editSubmission(${submission.id}); bootstrap.Modal.getInstance(document.getElementById('viewSubmissionModal')).hide();">
+                      <i class="fas fa-edit me-2"></i>Editar Entrega
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+
+            // Insertar modal y mostrarlo
+            document.getElementById('modals-container').innerHTML = modalHtml;
+            const modal = new bootstrap.Modal(document.getElementById('viewSubmissionModal'));
+            modal.show();
+
+        } catch (error) {
+            this.showNotification('Error al cargar datos de la entrega: ' + error.message, 'error');
+        }
+    }
+
+    async editSubmission(id) {
+        try {
+            // Obtener la entrega actual
+            const submission = await apiClient.getSubmissionById(id);
+            
+            if (!submission) {
+                this.showNotification('Entrega no encontrada', 'error');
+                return;
+            }
+
+            // Obtener asignaciones y equipos para los selects
+            const assignments = this.loadedData.assignments.length ? this.loadedData.assignments : await apiClient.getAssignments();
+            const teams = this.loadedData.teams.length ? this.loadedData.teams : await apiClient.getTeams();
+
+            // Formatear fecha para el input datetime-local
+            const formatDateForInput = (dateValue) => {
+                const date = this.parseBackendDate(dateValue);
+                if (!date) return '';
+                return date.toISOString().slice(0, 16);
+            };
+
+            // Modal HTML para editar entrega
+            const modalHtml = `
+            <div class="modal fade" id="editSubmissionModal" tabindex="-1">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Editar Entrega #${submission.id}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                  </div>
+                  <form id="edit-submission-form">
+                    <div class="modal-body">
+                      <div class="row">
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label class="form-label">Asignación *</label>
+                            <select class="form-select" name="assignmentId" required>
+                              <option value="">Seleccione una asignación</option>
+                              ${assignments.map(a => `<option value="${a.id}" ${a.id == submission.assignmentId ? 'selected' : ''}>${a.title}</option>`).join('')}
+                            </select>
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label class="form-label">Equipo *</label>
+                            <select class="form-select" name="teamId" required>
+                              <option value="">Seleccione un equipo</option>
+                              ${teams.map(t => `<option value="${t.id}" ${t.id == submission.teamId ? 'selected' : ''}>${t.name}</option>`).join('')}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">URL del Archivo *</label>
+                        <input type="url" class="form-control" name="fileUrl" required 
+                               value="${submission.fileUrl || ''}"
+                               placeholder="https://example.com/mi-archivo.pdf" />
+                        <div class="form-text">Ingrese la URL donde está alojado el archivo de la entrega</div>
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">Fecha de Entrega</label>
+                        <input type="datetime-local" class="form-control" name="submittedAt"
+                               value="${formatDateForInput(submission.submittedAt)}" />
+                      </div>
+                      <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Asegúrese de que el archivo esté accesible públicamente en la URL proporcionada.
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                      <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Actualizar Entrega
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>`;
+
+            // Insertar modal y mostrarlo
+            document.getElementById('modals-container').innerHTML = modalHtml;
+            const modal = new bootstrap.Modal(document.getElementById('editSubmissionModal'));
+            modal.show();
+
+            // Manejar submit
+            document.getElementById('edit-submission-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const assignmentId = parseInt(form.assignmentId.value);
+                const teamId = parseInt(form.teamId.value);
+                const fileUrl = form.fileUrl.value.trim();
+                const submittedAt = form.submittedAt.value;
+
+                if (!assignmentId || !teamId || !fileUrl || !submittedAt) {
+                    this.showNotification('Por favor complete todos los campos obligatorios', 'error');
+                    return;
+                }
+
+                try {
+                    // Preparar datos para enviar
+                    const submissionData = {
+                        assignmentId: assignmentId,
+                        teamId: teamId,
+                        fileUrl: fileUrl,
+                        submittedAt: submittedAt
+                    };
+
+                    const updatedSubmission = await apiClient.updateSubmission(id, submissionData);
+                    this.showNotification('Entrega actualizada exitosamente', 'success');
+                    modal.hide();
+                    
+                    // Recargar datos si estamos en la sección de entregas
+                    if (this.currentSection === 'submissions') {
+                        this.loadSectionData('submissions');
+                    }
+                } catch (error) {
+                    this.showNotification('Error al actualizar la entrega: ' + error.message, 'error');
+                }
+            };
+
+        } catch (error) {
+            this.showNotification('Error al cargar datos para editar: ' + error.message, 'error');
+        }
+    }
     editEvaluation(id) { this.showNotification(`Editar evaluación ${id} - En desarrollo`, 'info'); }
     editFeedback(id) { this.showNotification(`Editar retroalimentación ${id} - En desarrollo`, 'info'); }
 
@@ -1276,26 +1905,64 @@ Los miembros no serán eliminados, pero perderán la asociación con este equipo
     }
 
     async deleteAssignment(id) {
-        if (confirm('¿Estás seguro de que quieres eliminar esta asignación?')) {
-            try {
-                await apiClient.deleteAssignment(id);
-                this.showNotification('Asignación eliminada correctamente');
-                this.loadSectionData('assignments');
-            } catch (error) {
-                this.showNotification('Error al eliminar asignación: ' + error.message, 'error');
+        try {
+            // Obtener la asignación para mostrar su nombre en la confirmación
+            const assignment = await apiClient.getAssignmentById(id);
+            const assignmentTitle = assignment ? assignment.title : `ID ${id}`;
+            
+            const confirmMessage = `¿Estás seguro de que quieres eliminar la asignación "${assignmentTitle}"?
+
+⚠️ ADVERTENCIA: Esta acción no se puede deshacer.
+Se eliminarán también todas las entregas y evaluaciones asociadas.`;
+
+            if (confirm(confirmMessage)) {
+                try {
+                    await apiClient.deleteAssignment(id);
+                    this.showNotification(`Asignación "${assignmentTitle}" eliminada correctamente`);
+                    this.loadSectionData('assignments');
+                } catch (error) {
+                    this.showNotification('Error al eliminar asignación: ' + error.message, 'error');
+                }
+            }
+        } catch (error) {
+            // Si no se puede obtener la asignación, mostrar confirmación genérica
+            if (confirm('¿Estás seguro de que quieres eliminar esta asignación?\n\nEsta acción no se puede deshacer.')) {
+                try {
+                    await apiClient.deleteAssignment(id);
+                    this.showNotification('Asignación eliminada correctamente');
+                    this.loadSectionData('assignments');
+                } catch (error) {
+                    this.showNotification('Error al eliminar asignación: ' + error.message, 'error');
+                }
             }
         }
     }
 
     async deleteSubmission(id) {
-        if (confirm('¿Estás seguro de que quieres eliminar esta entrega?')) {
-            try {
+        try {
+            // Obtener datos de la entrega para mostrar información más específica
+            const submission = await apiClient.getSubmissionById(id);
+            const submissionInfo = submission ? 
+                `"${submission.assignmentTitle || 'Sin título'}" del equipo "${submission.teamName || 'Sin equipo'}"` :
+                `#${id}`;
+
+            const confirmMessage = `¿Estás seguro de que quieres eliminar la entrega ${submissionInfo}?
+
+⚠️ ADVERTENCIA: Esta acción no se puede deshacer.
+
+Esto también eliminará todas las evaluaciones asociadas a esta entrega.`;
+
+            if (confirm(confirmMessage)) {
                 await apiClient.deleteSubmission(id);
-                this.showNotification('Entrega eliminada correctamente');
-                this.loadSectionData('submissions');
-            } catch (error) {
-                this.showNotification('Error al eliminar entrega: ' + error.message, 'error');
+                this.showNotification('Entrega eliminada correctamente', 'success');
+                
+                // Recargar datos si estamos en la sección de entregas
+                if (this.currentSection === 'submissions') {
+                    this.loadSectionData('submissions');
+                }
             }
+        } catch (error) {
+            this.showNotification('Error al eliminar entrega: ' + error.message, 'error');
         }
     }
 
@@ -1322,6 +1989,179 @@ Los miembros no serán eliminados, pero perderán la asociación con este equipo
             }
         }
     }
+
+    // Método para ver detalles de asignación
+    async viewAssignment(id) {
+        try {
+            // Obtener la asignación y sus detalles
+            const assignment = await apiClient.getAssignmentById(id);
+            
+            if (!assignment) {
+                this.showNotification('Asignación no encontrada', 'error');
+                return;
+            }
+
+            // Formatear fechas
+            const formatDate = (dateValue) => {
+                const date = this.parseBackendDate(dateValue);
+                if (!date) return 'No especificada';
+                return date.toLocaleString('es-ES', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            };
+
+            // Calcular el estado de la asignación
+            const now = new Date();
+            const start = this.parseBackendDate(assignment.startDate);
+            const due = this.parseBackendDate(assignment.dueDate);
+            
+            let status = 'Sin fechas definidas';
+            let statusClass = 'secondary';
+            let statusIcon = 'question-circle';
+            
+            if (start && due) {
+                if (now < start) {
+                    status = 'Próxima a comenzar';
+                    statusClass = 'info';
+                    statusIcon = 'clock';
+                } else if (now >= start && now <= due) {
+                    status = 'En progreso';
+                    statusClass = 'success';
+                    statusIcon = 'play-circle';
+                } else {
+                    status = 'Vencida';
+                    statusClass = 'danger';
+                    statusIcon = 'times-circle';
+                }
+            }
+
+            // Calcular tiempo restante
+            let timeRemaining = '';
+            if (due) {
+                const timeDiff = due.getTime() - now.getTime();
+                if (timeDiff > 0) {
+                    const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    timeRemaining = `${days} días, ${hours} horas`;
+                } else {
+                    const overdueDays = Math.floor(Math.abs(timeDiff) / (1000 * 60 * 60 * 24));
+                    timeRemaining = `Vencida hace ${overdueDays} días`;
+                }
+            }
+
+            // Modal HTML para mostrar detalles
+            const modalHtml = `
+            <div class="modal fade" id="viewAssignmentModal" tabindex="-1">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                      <i class="fas fa-tasks me-2"></i>Detalles de la Asignación
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="row">
+                      <div class="col-md-6">
+                        <div class="card h-100">
+                          <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información General</h6>
+                          </div>
+                          <div class="card-body">
+                            <div class="mb-3">
+                              <strong>ID:</strong> 
+                              <span class="badge bg-primary">${assignment.id}</span>
+                            </div>
+                            <div class="mb-3">
+                              <strong>Título:</strong><br>
+                              <span class="text-dark fw-bold">${assignment.title}</span>
+                            </div>
+                            <div class="mb-3">
+                              <strong>Estado:</strong><br>
+                              <span class="badge bg-${statusClass}">
+                                <i class="fas fa-${statusIcon} me-1"></i>${status}
+                              </span>
+                            </div>
+                            ${timeRemaining ? `
+                            <div class="mb-3">
+                              <strong>Tiempo restante:</strong><br>
+                              <span class="text-${statusClass === 'danger' ? 'danger' : 'info'}">${timeRemaining}</span>
+                            </div>
+                            ` : ''}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div class="col-md-6">
+                        <div class="card h-100">
+                          <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-calendar me-2"></i>Fechas Importantes</h6>
+                          </div>
+                          <div class="card-body">
+                            <div class="mb-3">
+                              <strong>Fecha de Inicio:</strong><br>
+                              <span class="text-muted">
+                                <i class="fas fa-play me-1"></i>${formatDate(assignment.startDate)}
+                              </span>
+                            </div>
+                            <div class="mb-3">
+                              <strong>Fecha Límite:</strong><br>
+                              <span class="text-${statusClass === 'danger' ? 'danger' : 'muted'}">
+                                <i class="fas fa-flag-checkered me-1"></i>${formatDate(assignment.dueDate)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    ${assignment.description ? `
+                    <div class="row mt-3">
+                      <div class="col-12">
+                        <div class="card">
+                          <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-file-text me-2"></i>Descripción</h6>
+                          </div>
+                          <div class="card-body">
+                            <p class="mb-0">${assignment.description}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    ` : `
+                    <div class="row mt-3">
+                      <div class="col-12">
+                        <div class="alert alert-info">
+                          <i class="fas fa-info-circle me-2"></i>
+                          Esta asignación no tiene descripción detallada.
+                        </div>
+                      </div>
+                    </div>
+                    `}
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="app.editAssignment(${assignment.id}); bootstrap.Modal.getInstance(document.getElementById('viewAssignmentModal')).hide();">
+                      <i class="fas fa-edit me-2"></i>Editar Asignación
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+
+            // Insertar modal y mostrarlo
+            document.getElementById('modals-container').innerHTML = modalHtml;
+            const modal = new bootstrap.Modal(document.getElementById('viewAssignmentModal'));
+            modal.show();
+
+        } catch (error) {
+            this.showNotification('Error al cargar los detalles de la asignación: ' + error.message, 'error');
+        }
+    }
 }
 
 // Funciones globales para navegación
@@ -1340,7 +2180,6 @@ function showCreateUserModal() { app.showCreateUserModal(); }
 function showCreateRoleModal() { app.showCreateRoleModal(); }
 function showCreateTeamModal() { app.showCreateTeamModal(); }
 function showCreateAssignmentModal() { app.showCreateAssignmentModal(); }
-function showCreateScheduleModal() { app.showCreateScheduleModal(); }
 function showCreateSubmissionModal() { app.showCreateSubmissionModal(); }
 function showCreateEvaluationModal() { app.showCreateEvaluationModal(); }
 function showCreateFeedbackModal() { app.showCreateFeedbackModal(); }
