@@ -94,11 +94,6 @@ public class SubmissionService {
             throw new IllegalArgumentException("Submission already exists for this assignment and team");
         }
 
-        // Verificar si aún está en el plazo de entrega
-        if (LocalDateTime.now().isAfter(assignment.getDueDate())) {
-            throw new IllegalArgumentException("Assignment deadline has passed");
-        }
-
         Submission submission = new Submission();
         submission.setAssignment(assignment);
         submission.setTeam(team);

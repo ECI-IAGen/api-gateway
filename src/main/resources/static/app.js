@@ -319,28 +319,266 @@ class App {
         const tbody = document.getElementById('evaluations-table-body');
         tbody.innerHTML = '';
 
+        if (evaluations.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        <i class="fas fa-star fa-2x mb-3 d-block"></i>
+                        No hay evaluaciones registradas
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
         evaluations.forEach(evaluation => {
-            const evaluatedAtObj = this.parseBackendDate(evaluation.evaluatedAt);
-            const evaluatedAt = evaluatedAtObj ? evaluatedAtObj.toLocaleString('es-ES') : 'Sin fecha';
+            const createdAtObj = this.parseBackendDate(evaluation.createdAt);
+            const createdAt = createdAtObj ? createdAtObj.toLocaleString('es-ES') : 'Sin fecha';
+            
+            // Mostrar criteriaJson de forma resumida si existe
+            let criteriaText = 'Manual';
+            let criteriaIcon = 'fas fa-user';
+            let criteriaColor = 'text-primary';
+            
+            if (evaluation.criteriaJson) {
+                try {
+                    const criteria = JSON.parse(evaluation.criteriaJson);
+                    if (criteria.hasLateCommits !== undefined) {
+                        criteriaText = criteria.hasLateCommits ? 'Auto (Tardío)' : 'Auto (A tiempo)';
+                        criteriaIcon = 'fas fa-robot';
+                        criteriaColor = criteria.hasLateCommits ? 'text-warning' : 'text-success';
+                    } else {
+                        criteriaText = 'Manual con criterios';
+                        criteriaIcon = 'fas fa-clipboard-list';
+                        criteriaColor = 'text-info';
+                    }
+                } catch (e) {
+                    criteriaText = 'Manual con criterios';
+                    criteriaIcon = 'fas fa-clipboard-list';
+                    criteriaColor = 'text-info';
+                }
+            }
+            
             const row = `
                 <tr>
-                    <td>${evaluation.id}</td>
-                    <td>${evaluation.submission ? evaluation.submission.id : 'Sin entrega'}</td>
-                    <td><span class="badge bg-primary">${evaluation.score || 0}</span></td>
-                    <td class="text-truncate" title="${evaluation.comments || ''}">${evaluation.comments || 'Sin comentarios'}</td>
-                    <td>${evaluatedAt}</td>
+                    <td>
+                        <span class="badge bg-secondary">#${evaluation.id}</span>
+                    </td>
+                    <td>
+                        <div>
+                            <strong class="text-primary">ID: ${evaluation.submissionId}</strong><br>
+                            <span class="fw-semibold">${evaluation.assignmentTitle || 'Sin título'}</span><br>
+                            <small class="text-muted">
+                                <i class="fas fa-users me-1"></i>${evaluation.teamName || 'Sin equipo'}
+                            </small>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <span class="badge fs-6 ${evaluation.score >= 4.0 ? 'bg-success' : evaluation.score >= 3.0 ? 'bg-warning text-dark' : 'bg-danger'}">
+                                ${evaluation.score ? evaluation.score.toFixed(1) : '0.0'}
+                            </span>
+                            <small class="text-muted ms-2">/ 5.0</small>
+                        </div>
+                    </td>
+                    <td>
+                        <div>
+                            <strong class="d-block">${evaluation.evaluatorName || 'Desconocido'}</strong>
+                            <small class="${criteriaColor}">
+                                <i class="${criteriaIcon} me-1"></i>${criteriaText}
+                            </small>
+                        </div>
+                    </td>
+                    <td>
+                        <div>
+                            <small class="text-muted d-block">${createdAt}</small>
+                        </div>
+                    </td>
                     <td class="action-buttons">
-                        <button class="btn btn-sm btn-outline-primary" onclick="app.editEvaluation(${evaluation.id})">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="app.deleteEvaluation(${evaluation.id})">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-sm btn-outline-info" onclick="app.viewEvaluation(${evaluation.id})" title="Ver detalles">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" onclick="app.editEvaluation(${evaluation.id})" title="Editar evaluación">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="app.deleteEvaluation(${evaluation.id})" title="Eliminar evaluación">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
             tbody.innerHTML += row;
         });
+    }
+
+    // Descargar todas las evaluaciones
+    async downloadAllEvaluations() {
+        try {
+            this.showLoading(true);
+            
+            // Obtener todas las evaluaciones con datos relacionados
+            const evaluations = await apiClient.getEvaluations();
+            
+            if (evaluations.length === 0) {
+                this.showNotification('No hay evaluaciones para descargar', 'error');
+                return;
+            }
+
+            // Para cada evaluación, obtener datos adicionales de entrega y asignación si es necesario
+            const enrichedEvaluations = await Promise.all(evaluations.map(async (evaluation) => {
+                let submission = null;
+                let assignment = null;
+                
+                try {
+                    // Obtener la entrega si tenemos el ID
+                    if (evaluation.submissionId) {
+                        submission = await apiClient.getSubmissionById(evaluation.submissionId);
+                    }
+                    
+                    // Obtener la asignación a través de la entrega o directamente
+                    if (submission && submission.assignmentId) {
+                        assignment = await apiClient.getAssignmentById(submission.assignmentId);
+                    } else if (evaluation.assignmentId) {
+                        assignment = await apiClient.getAssignmentById(evaluation.assignmentId);
+                    }
+                } catch (error) {
+                    console.warn(`Error obteniendo datos relacionados para evaluación ${evaluation.id}:`, error);
+                }
+
+                return {
+                    ...evaluation,
+                    submission,
+                    assignment
+                };
+            }));
+
+            // Generar CSV
+            const csvContent = this.generateEvaluationsCSV(enrichedEvaluations);
+            
+            // Crear y descargar archivo
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            
+            const now = new Date();
+            const timestamp = now.toISOString().split('T')[0]; // YYYY-MM-DD
+            link.download = `evaluaciones_${timestamp}.csv`;
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            this.showNotification(`Se descargaron ${evaluations.length} evaluaciones correctamente`, 'success');
+            
+        } catch (error) {
+            console.error('Error descargando evaluaciones:', error);
+            this.showNotification('Error al descargar las evaluaciones', 'error');
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    // Generar contenido CSV para las evaluaciones
+    generateEvaluationsCSV(evaluations) {
+        // Encabezados del CSV
+        const headers = [
+            'ID Evaluación',
+            'ID Entrega', 
+            'Título Asignación',
+            'Nombre Equipo',
+            'Puntuación (0-5)',
+            'Puntuación (%)',
+            'Evaluador',
+            'Tipo Evaluación',
+            'Fecha Evaluación',
+            'Fecha Límite',
+            'Fecha Entrega Real',
+            'Estado Entrega',
+            'Comentarios',
+            'Criterios JSON'
+        ];
+
+        // Función para escapar valores CSV
+        const escapeCSV = (value) => {
+            if (value === null || value === undefined) return '';
+            const str = String(value);
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+        };
+
+        // Generar filas de datos
+        const rows = evaluations.map(evaluation => {
+            const createdAtObj = this.parseBackendDate(evaluation.createdAt);
+            const createdAt = createdAtObj ? createdAtObj.toLocaleDateString('es-ES') : '';
+            
+            // Determinar tipo de evaluación
+            let evaluationType = 'Manual';
+            if (evaluation.criteriaJson) {
+                try {
+                    const criteria = JSON.parse(evaluation.criteriaJson);
+                    if (criteria.hasLateCommits !== undefined) {
+                        evaluationType = criteria.hasLateCommits ? 'Automática (Tardío)' : 'Automática (A tiempo)';
+                    } else {
+                        evaluationType = 'Manual con criterios';
+                    }
+                } catch (e) {
+                    evaluationType = 'Manual con criterios';
+                }
+            }
+
+            // Fechas de la asignación y entrega
+            let dueDate = '';
+            let actualSubmissionDate = '';
+            let submissionStatus = '';
+
+            if (evaluation.assignment && evaluation.assignment.dueDate) {
+                const dueDateObj = this.parseBackendDate(evaluation.assignment.dueDate);
+                dueDate = dueDateObj ? dueDateObj.toLocaleDateString('es-ES') : '';
+            }
+
+            if (evaluation.submission) {
+                if (evaluation.submission.submittedAt) {
+                    const submittedAtObj = this.parseBackendDate(evaluation.submission.submittedAt);
+                    actualSubmissionDate = submittedAtObj ? submittedAtObj.toLocaleDateString('es-ES') : '';
+                    
+                    // Determinar si fue tardía
+                    if (evaluation.assignment && evaluation.assignment.dueDate) {
+                        const dueDateObj = this.parseBackendDate(evaluation.assignment.dueDate);
+                        if (dueDateObj && submittedAtObj) {
+                            submissionStatus = submittedAtObj > dueDateObj ? 'Tardía' : 'A tiempo';
+                        }
+                    }
+                }
+            }
+
+            const score = evaluation.score || 0;
+            const scorePercentage = (score * 20).toFixed(1); // Convertir 0-5 a 0-100
+
+            return [
+                evaluation.id,
+                evaluation.submissionId || '',
+                evaluation.assignmentTitle || evaluation.assignment?.title || '',
+                evaluation.teamName || evaluation.submission?.teamName || '',
+                score.toFixed(1),
+                scorePercentage,
+                evaluation.evaluatorName || '',
+                evaluationType,
+                createdAt,
+                dueDate,
+                actualSubmissionDate,
+                submissionStatus,
+                evaluation.comments || '',
+                evaluation.criteriaJson || ''
+            ].map(escapeCSV);
+        });
+
+        // Combinar encabezados y filas
+        const csvLines = [headers.join(','), ...rows.map(row => row.join(','))];
+        return csvLines.join('\n');
     }
 
     // Renderizar tabla de retroalimentación
@@ -782,7 +1020,7 @@ class App {
                         <div class="form-text">Ingrese la URL donde está alojado el archivo de la entrega</div>
                       </div>
                       <div class="mb-3">
-                        <label class="form-label">Fecha de Entregaee</label>
+                        <label class="form-label">Fecha de Entrega</label>
                         <input type="datetime-local" class="form-control" name="submittedAt" />
                         <div class="form-text">Déjelo vacío para usar la fecha actual</div>
                       </div>
@@ -856,8 +1094,279 @@ class App {
         }
     }
 
-    showCreateEvaluationModal() {
-        this.showNotification('Funcionalidad de crear evaluación en desarrollo', 'info');
+    async showCreateEvaluationModal() {
+        try {
+            // Obtener entregas, usuarios para los selects
+            const submissions = await apiClient.getSubmissions();
+            const users = this.loadedData.users.length ? this.loadedData.users : await apiClient.getUsers();
+
+            // Modal HTML para crear evaluación
+            const modalHtml = `
+            <div class="modal fade" id="createEvaluationModal" tabindex="-1">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-star me-2"></i>Crear Evaluación</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">
+                    <!-- Pestañas para Manual vs Automática -->
+                    <ul class="nav nav-tabs" id="evaluationTabs" role="tablist">
+                      <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="manual-tab" data-bs-toggle="tab" data-bs-target="#manual" type="button" role="tab">
+                          <i class="fas fa-edit me-2"></i>Evaluación Manual
+                        </button>
+                      </li>
+                      <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="auto-tab" data-bs-toggle="tab" data-bs-target="#auto" type="button" role="tab">
+                          <i class="fas fa-robot me-2"></i>Evaluación Automática
+                        </button>
+                      </li>
+                    </ul>
+                    
+                    <div class="tab-content mt-3" id="evaluationTabContent">
+                      <!-- Evaluación Manual -->
+                      <div class="tab-pane fade show active" id="manual" role="tabpanel">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Evaluación Manual:</strong> Complete todos los campos para crear una evaluación personalizada.
+                        </div>
+                        <form id="create-evaluation-manual-form">
+                          <div class="row">
+                            <div class="col-md-6">
+                              <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-file-upload me-1"></i>Entrega *
+                                </label>
+                                <select class="form-select" name="submissionId" required>
+                                  <option value="">Seleccione una entrega</option>
+                                  ${submissions.map(s => `
+                                    <option value="${s.id}">
+                                      ID: ${s.id} - ${s.assignmentTitle || 'Sin título'} (${s.teamName || 'Sin equipo'})
+                                    </option>
+                                  `).join('')}
+                                </select>
+                              </div>
+                            </div>
+                            <div class="col-md-6">
+                              <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-user-check me-1"></i>Evaluador *
+                                </label>
+                                <select class="form-select" name="evaluatorId" required>
+                                  <option value="">Seleccione un evaluador</option>
+                                  ${users.map(u => `<option value="${u.id}">${u.name} ${u.email ? `(${u.email})` : ''}</option>`).join('')}
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-chart-line me-1"></i>Puntuación *
+                            </label>
+                            <div class="input-group">
+                              <input type="number" class="form-control" name="score" required 
+                                     min="0" max="5" step="0.1" placeholder="0.0" />
+                              <span class="input-group-text">/ 5.0</span>
+                            </div>
+                            <div class="form-text">Puntuación entre 0 y 5</div>
+                          </div>
+                          <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-clipboard-list me-1"></i>Criterios de Evaluación (JSON)
+                            </label>
+                            <textarea class="form-control" name="criteriaJson" rows="4"
+                                      placeholder='{"rubrica": "valor", "comentarios": "observaciones"}'></textarea>
+                            <div class="form-text">Opcional: Criterios en formato JSON válido</div>
+                          </div>
+                          <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                              <i class="fas fa-save me-2"></i>Crear Evaluación
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                      
+                      <!-- Evaluación Automática -->
+                      <div class="tab-pane fade" id="auto" role="tabpanel">
+                        <div class="alert alert-info">
+                            <i class="fas fa-robot me-2"></i>
+                            <strong>Evaluación Automática GitHub</strong><br>
+                            Esta opción evaluará automáticamente los commits de GitHub de la entrega seleccionada.
+                            La puntuación se basará en la puntualidad de los commits respecto a la fecha límite.
+                        </div>
+                        <form id="create-evaluation-auto-form">
+                          <div class="row">
+                            <div class="col-md-6">
+                              <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-file-upload me-1"></i>Entrega *
+                                </label>
+                                <select class="form-select" name="submissionId" required>
+                                  <option value="">Seleccione una entrega</option>
+                                  ${submissions.map(s => `
+                                    <option value="${s.id}">
+                                      ID: ${s.id} - ${s.assignmentTitle || 'Sin título'} (${s.teamName || 'Sin equipo'})
+                                    </option>
+                                  `).join('')}
+                                </select>
+                              </div>
+                            </div>
+                            <div class="col-md-6">
+                              <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-user-check me-1"></i>Evaluador *
+                                </label>
+                                <select class="form-select" name="evaluatorId" required>
+                                  <option value="">Seleccione un evaluador</option>
+                                  ${users.map(u => `<option value="${u.id}">${u.name} ${u.email ? `(${u.email})` : ''}</option>`).join('')}
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Requisitos para evaluación automática:</strong><br>
+                            • La URL del archivo de la entrega debe ser un repositorio de GitHub válido<br>
+                            • El repositorio debe ser público o accesible<br>
+                            • La evaluación analizará todos los commits hasta la fecha límite de la asignación<br>
+                            • Se asignará automáticamente una puntuación basada en la puntualidad
+                          </div>
+                          <div class="alert alert-success">
+                            <i class="fas fa-magic me-2"></i>
+                            <strong>Criterios automáticos:</strong><br>
+                            • 5.0 puntos: Todos los commits antes de la fecha límite<br>
+                            • 4.0 puntos: Commits tardíos pero dentro del plazo de gracia<br>
+                            • 3.0 puntos: Commits significativamente tardíos
+                          </div>
+                          <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </button>
+                            <button type="submit" class="btn btn-success">
+                              <i class="fas fa-robot me-2"></i>Evaluar Automáticamente
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+
+            // Insertar modal y mostrarlo
+            document.getElementById('modals-container').innerHTML = modalHtml;
+            const modal = new bootstrap.Modal(document.getElementById('createEvaluationModal'));
+            modal.show();
+
+            // Manejar submit para evaluación manual
+            document.getElementById('create-evaluation-manual-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const submissionId = parseInt(form.submissionId.value);
+                const evaluatorId = parseInt(form.evaluatorId.value);
+                const score = parseFloat(form.score.value);
+                const criteriaJson = form.criteriaJson.value.trim();
+
+                if (!submissionId || !evaluatorId || isNaN(score)) {
+                    this.showNotification('Por favor complete todos los campos obligatorios', 'error');
+                    return;
+                }
+
+                if (score < 0 || score > 5) {
+                    this.showNotification('La puntuación debe estar entre 0 y 5', 'error');
+                    return;
+                }
+
+                try {
+                    // Mostrar indicador de carga
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    const originalText = submitBtn.innerHTML;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creando...';
+                    submitBtn.disabled = true;
+
+                    const evaluationData = {
+                        submissionId: submissionId,
+                        evaluatorId: evaluatorId,
+                        score: score
+                    };
+
+                    if (criteriaJson) {
+                        try {
+                            JSON.parse(criteriaJson); // Validar JSON
+                            evaluationData.criteriaJson = criteriaJson;
+                        } catch (e) {
+                            this.showNotification('El JSON de criterios no es válido', 'error');
+                            submitBtn.innerHTML = originalText;
+                            submitBtn.disabled = false;
+                            return;
+                        }
+                    }
+
+                    const newEvaluation = await apiClient.createEvaluation(evaluationData);
+                    this.showNotification('Evaluación creada exitosamente', 'success');
+                    modal.hide();
+                    
+                    if (this.currentSection === 'evaluations') {
+                        this.loadSectionData('evaluations');
+                    }
+                } catch (error) {
+                    this.showNotification('Error al crear la evaluación: ' + error.message, 'error');
+                } finally {
+                    // Restaurar botón
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                    }
+                }
+            };
+
+            // Manejar submit para evaluación automática
+            document.getElementById('create-evaluation-auto-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const submissionId = parseInt(form.submissionId.value);
+                const evaluatorId = parseInt(form.evaluatorId.value);
+
+                if (!submissionId || !evaluatorId) {
+                    this.showNotification('Por favor complete todos los campos obligatorios', 'error');
+                    return;
+                }
+
+                try {
+                    // Mostrar indicador de carga
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    const originalText = submitBtn.innerHTML;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Analizando repositorio...';
+                    submitBtn.disabled = true;
+
+                    const newEvaluation = await apiClient.autoEvaluateGitHubCommits(submissionId, evaluatorId);
+                    this.showNotification('Evaluación automática completada exitosamente', 'success');
+                    modal.hide();
+                    
+                    if (this.currentSection === 'evaluations') {
+                        this.loadSectionData('evaluations');
+                    }
+                } catch (error) {
+                    this.showNotification('Error en la evaluación automática: ' + error.message, 'error');
+                } finally {
+                    // Restaurar botón
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                    }
+                }
+            };
+
+        } catch (error) {
+            this.showNotification('Error al cargar datos para el modal: ' + error.message, 'error');
+        }
     }
 
     showCreateFeedbackModal() {
@@ -1814,7 +2323,428 @@ class App {
             this.showNotification('Error al cargar datos para editar: ' + error.message, 'error');
         }
     }
-    editEvaluation(id) { this.showNotification(`Editar evaluación ${id} - En desarrollo`, 'info'); }
+
+    // Método para ver detalles de evaluación
+    async viewEvaluation(id) {
+        try {
+            const evaluation = await apiClient.getEvaluationById(id);
+            
+            if (!evaluation) {
+                this.showNotification('Evaluación no encontrada', 'error');
+                return;
+            }
+
+            // Obtener información adicional si no está disponible en la evaluación
+            let assignmentDueDate = evaluation.assignmentDueDate;
+            let submittedAt = evaluation.submittedAt;
+            let assignmentId = evaluation.assignmentId;
+
+            // Si no tenemos la fecha límite de la asignación, intentar obtenerla
+            if (!assignmentDueDate && evaluation.submissionId) {
+                try {
+                    const submission = await apiClient.getSubmissionById(evaluation.submissionId);
+                    if (submission) {
+                        submittedAt = submittedAt || submission.submittedAt;
+                        assignmentId = assignmentId || submission.assignmentId;
+                        
+                        // Si tenemos el ID de la asignación, obtener la fecha límite
+                        if (submission.assignmentId && !assignmentDueDate) {
+                            const assignment = await apiClient.getAssignmentById(submission.assignmentId);
+                            if (assignment) {
+                                assignmentDueDate = assignment.dueDate;
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.warn('No se pudo obtener información adicional de la entrega:', error);
+                }
+            }
+
+            // Formatear fecha
+            const formatDate = (dateValue) => {
+                const date = this.parseBackendDate(dateValue);
+                if (!date) return 'No especificada';
+                return date.toLocaleString('es-ES', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            };
+
+            // Procesar criterios JSON
+            let criteriaDisplay = 'Manual';
+            let criteriaDetails = '';
+            let criteriaIcon = 'fas fa-user';
+            let criteriaColor = 'info';
+            
+            if (evaluation.criteriaJson) {
+                try {
+                    const criteria = JSON.parse(evaluation.criteriaJson);
+                    if (criteria.hasLateCommits !== undefined) {
+                        criteriaDisplay = 'Automática (GitHub)';
+                        criteriaIcon = 'fas fa-robot';
+                        criteriaColor = criteria.hasLateCommits ? 'warning' : 'success';
+                        criteriaDetails = `
+                            <div class="mt-3 p-3 border rounded bg-light">
+                                <h6><i class="fas fa-code-branch me-2"></i>Análisis de Commits GitHub</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <span class="badge ${criteria.hasLateCommits ? 'bg-warning text-dark' : 'bg-success'} mb-2">
+                                            ${criteria.hasLateCommits ? 'Commits tardíos detectados' : 'Todos los commits a tiempo'}
+                                        </span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        ${criteria.commits ? `<small class="text-muted">Total de commits analizados: <strong>${criteria.commits.length}</strong></small>` : ''}
+                                    </div>
+                                </div>
+                                ${criteria.commits && criteria.commits.length > 0 ? `
+                                    <details class="mt-2">
+                                        <summary class="text-primary" style="cursor: pointer;">Ver detalles de commits</summary>
+                                        <div class="mt-2 small">
+                                            ${criteria.commits.slice(0, 5).map(commit => `
+                                                <div class="border-start border-2 border-secondary ps-3 mb-2">
+                                                    <div><strong>Fecha:</strong> ${new Date(commit.date).toLocaleString('es-ES')}</div>
+                                                    <div><strong>Mensaje:</strong> ${commit.message}</div>
+                                                    <div><strong>Autor:</strong> ${commit.author}</div>
+                                                </div>
+                                            `).join('')}
+                                            ${criteria.commits.length > 5 ? `<small class="text-muted">Y ${criteria.commits.length - 5} commits más...</small>` : ''}
+                                        </div>
+                                    </details>
+                                ` : ''}
+                            </div>
+                        `;
+                    } else {
+                        criteriaDisplay = 'Manual con criterios personalizados';
+                        criteriaIcon = 'fas fa-clipboard-list';
+                        criteriaColor = 'info';
+                        criteriaDetails = `
+                            <div class="mt-3 p-3 border rounded bg-light">
+                                <h6><i class="fas fa-list me-2"></i>Criterios Personalizados</h6>
+                                <pre class="small mb-0">${JSON.stringify(criteria, null, 2)}</pre>
+                            </div>
+                        `;
+                    }
+                } catch (e) {
+                    criteriaDisplay = 'Manual con criterios (formato inválido)';
+                    criteriaIcon = 'fas fa-exclamation-triangle';
+                    criteriaColor = 'warning';
+                    criteriaDetails = `
+                        <div class="mt-3 p-3 border rounded bg-warning-subtle">
+                            <h6><i class="fas fa-exclamation-triangle me-2"></i>Criterios (Formato inválido)</h6>
+                            <pre class="small mb-0">${evaluation.criteriaJson}</pre>
+                        </div>
+                    `;
+                }
+            }
+
+            // Modal HTML para ver evaluación
+            const modalHtml = `
+            <div class="modal fade" id="viewEvaluationModal" tabindex="-1">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header bg-${criteriaColor} text-white">
+                    <h5 class="modal-title">
+                      <i class="${criteriaIcon} me-2"></i>Evaluación #${evaluation.id}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">
+                    <!-- Información principal -->
+                    <div class="row mb-4">
+                      <div class="col-md-4">
+                        <div class="card border-0 bg-light">
+                          <div class="card-body text-center">
+                            <h3 class="display-4 text-${evaluation.score >= 3.5 ? 'success' : evaluation.score >= 2.0 ? 'warning' : 'danger'}">
+                              ${evaluation.score ? evaluation.score.toFixed(1) : '0.0'}
+                            </h3>
+                            <p class="text-muted mb-0">Puntuación / 5.0</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-8">
+                        <h6><i class="fas fa-info-circle me-2"></i>Información General</h6>
+                        <table class="table table-sm">
+                          <tr>
+                            <td><strong>ID Evaluación:</strong></td>
+                            <td><span class="badge bg-secondary">#${evaluation.id}</span></td>
+                          </tr>
+                          <tr>
+                            <td><strong>Fecha:</strong></td>
+                            <td>${formatDate(evaluation.createdAt)}</td>
+                          </tr>
+                          <tr>
+                            <td><strong>Tipo:</strong></td>
+                            <td>
+                              <span class="badge bg-${criteriaColor}">
+                                <i class="${criteriaIcon} me-1"></i>${criteriaDisplay}
+                              </span>
+                            </td>
+                          </tr>
+                        </table>
+                      </div>
+                    </div>
+
+                    <!-- Información de la entrega -->
+                    <div class="mb-4">
+                      <h6><i class="fas fa-file-upload me-2"></i>Información de la Entrega</h6>
+                      <div class="card border-primary">
+                        <div class="card-body">
+                          <div class="row">
+                            <div class="col-md-6">
+                              <p><strong>ID Entrega:</strong> <span class="badge bg-primary">#${evaluation.submissionId}</span></p>
+                              <p><strong>Asignación:</strong> ${evaluation.assignmentTitle || 'Sin título'}</p>
+                              <p><strong>Equipo:</strong> ${evaluation.teamName || 'Sin equipo'}</p>
+                            </div>
+                            <div class="col-md-6">
+                              <p><strong>Evaluador:</strong> ${evaluation.evaluatorName || 'Desconocido'}</p>
+                              ${assignmentDueDate ? `
+                                <p><strong>Fecha Límite de Entrega:</strong><br>
+                                <span class="text-info">
+                                  <i class="fas fa-clock me-1"></i>${formatDate(assignmentDueDate)}
+                                </span></p>
+                              ` : `
+                                <p><strong>Fecha Límite de Entrega:</strong><br>
+                                <span class="text-muted">
+                                  <i class="fas fa-question-circle me-1"></i>No disponible
+                                </span></p>
+                              `}
+                              ${submittedAt ? `
+                                <p><strong>Fecha de Entrega Real:</strong><br>
+                                <span class="text-muted">
+                                  <i class="fas fa-calendar-check me-1"></i>${formatDate(submittedAt)}
+                                </span>
+                                ${assignmentDueDate && submittedAt ? (() => {
+                                    const dueDate = this.parseBackendDate(assignmentDueDate);
+                                    const submitDate = this.parseBackendDate(submittedAt);
+                                    if (dueDate && submitDate) {
+                                        const isLate = submitDate > dueDate;
+                                        return `<br><small class="badge ${isLate ? 'bg-warning text-dark' : 'bg-success'}">
+                                            <i class="fas ${isLate ? 'fa-exclamation-triangle' : 'fa-check'} me-1"></i>
+                                            ${isLate ? 'Entrega tardía' : 'Entrega a tiempo'}
+                                        </small>`;
+                                    }
+                                    return '';
+                                })() : ''}
+                                </p>
+                              ` : `
+                                <p><strong>Fecha de Entrega Real:</strong><br>
+                                <span class="text-muted">
+                                  <i class="fas fa-question-circle me-1"></i>No disponible
+                                </span></p>
+                              `}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Criterios de evaluación -->
+                    ${criteriaDetails ? `
+                    <div class="mb-3">
+                      <h6><i class="fas fa-clipboard-check me-2"></i>Criterios de Evaluación</h6>
+                      ${criteriaDetails}
+                    </div>
+                    ` : ''}
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-primary" onclick="app.editEvaluation(${evaluation.id}); bootstrap.Modal.getInstance(document.getElementById('viewEvaluationModal')).hide();">
+                      <i class="fas fa-edit me-2"></i>Editar Evaluación
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                      <i class="fas fa-times me-2"></i>Cerrar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+
+            // Insertar modal y mostrarlo
+            document.getElementById('modals-container').innerHTML = modalHtml;
+            const modal = new bootstrap.Modal(document.getElementById('viewEvaluationModal'));
+            modal.show();
+
+        } catch (error) {
+            this.showNotification('Error al cargar datos de la evaluación: ' + error.message, 'error');
+        }
+    }
+
+    async editEvaluation(id) {
+        try {
+            // Obtener la evaluación actual
+            const evaluation = await apiClient.getEvaluationById(id);
+            
+            if (!evaluation) {
+                this.showNotification('Evaluación no encontrada', 'error');
+                return;
+            }
+
+            // Obtener entregas y usuarios para los selects
+            const submissions = await apiClient.getSubmissions();
+            const users = this.loadedData.users.length ? this.loadedData.users : await apiClient.getUsers();
+
+            // Modal HTML para editar evaluación
+            const modalHtml = `
+            <div class="modal fade" id="editEvaluationModal" tabindex="-1">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>Editar Evaluación #${evaluation.id}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                  </div>
+                  <form id="edit-evaluation-form">
+                    <div class="modal-body">
+                      <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Nota:</strong> Solo se pueden modificar la puntuación y los criterios. La entrega y el evaluador están bloqueados por seguridad.
+                      </div>
+                      
+                      <div class="row">
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-file-upload me-1"></i>Entrega
+                            </label>
+                            <select class="form-select" name="submissionId" required disabled>
+                              ${submissions.map(s => `
+                                <option value="${s.id}" ${s.id == evaluation.submissionId ? 'selected' : ''}>
+                                  ID: ${s.id} - ${s.assignmentTitle || 'Sin título'} (${s.teamName || 'Sin equipo'})
+                                </option>
+                              `).join('')}
+                            </select>
+                            <div class="form-text text-muted">
+                                <i class="fas fa-lock me-1"></i>La entrega no se puede cambiar
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-user-check me-1"></i>Evaluador
+                            </label>
+                            <select class="form-select" name="evaluatorId" required disabled>
+                              ${users.map(u => `
+                                <option value="${u.id}" ${u.id == evaluation.evaluatorId ? 'selected' : ''}>
+                                  ${u.name} ${u.email ? `(${u.email})` : ''}
+                                </option>
+                              `).join('')}
+                            </select>
+                            <div class="form-text text-muted">
+                                <i class="fas fa-lock me-1"></i>El evaluador no se puede cambiar
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-chart-line me-1"></i>Puntuación *
+                        </label>
+                        <div class="input-group">
+                          <input type="number" class="form-control" name="score" required 
+                                 min="0" max="5" step="0.1" 
+                                 value="${evaluation.score || 0}" />
+                          <span class="input-group-text">/ 5.0</span>
+                        </div>
+                        <div class="form-text">Puntuación entre 0 y 5</div>
+                      </div>
+                      
+                      <div class="mb-3">
+                        <label class="form-label">
+                            <i class="fas fa-clipboard-list me-1"></i>Criterios de Evaluación (JSON)
+                        </label>
+                        <textarea class="form-control evaluation-criteria" name="criteriaJson" rows="6">${evaluation.criteriaJson || ''}</textarea>
+                        <div class="form-text">Criterios en formato JSON válido</div>
+                      </div>
+                      
+                      <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Importante:</strong> Los cambios en la puntuación pueden afectar estadísticas y reportes existentes.
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                      </button>
+                      <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Actualizar Evaluación
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>`;
+
+            // Insertar modal y mostrarlo
+            document.getElementById('modals-container').innerHTML = modalHtml;
+            const modal = new bootstrap.Modal(document.getElementById('editEvaluationModal'));
+            modal.show();
+
+            // Manejar submit
+            document.getElementById('edit-evaluation-form').onsubmit = async (e) => {
+                e.preventDefault();
+                const form = e.target;
+                const score = parseFloat(form.score.value);
+                const criteriaJson = form.criteriaJson.value.trim();
+
+                if (isNaN(score) || score < 0 || score > 5) {
+                    this.showNotification('La puntuación debe estar entre 0 y 5', 'error');
+                    return;
+                }
+
+                try {
+                    // Mostrar indicador de carga
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    const originalText = submitBtn.innerHTML;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Actualizando...';
+                    submitBtn.disabled = true;
+
+                    const evaluationData = {
+                        score: score
+                    };
+
+                    if (criteriaJson) {
+                        try {
+                            JSON.parse(criteriaJson); // Validar JSON
+                            evaluationData.criteriaJson = criteriaJson;
+                        } catch (e) {
+                            this.showNotification('El JSON de criterios no es válido', 'error');
+                            submitBtn.innerHTML = originalText;
+                            submitBtn.disabled = false;
+                            return;
+                        }
+                    } else {
+                        // Si está vacío, enviar null para limpiar los criterios
+                        evaluationData.criteriaJson = null;
+                    }
+
+                    const updatedEvaluation = await apiClient.updateEvaluation(id, evaluationData);
+                    this.showNotification('Evaluación actualizada exitosamente', 'success');
+                    modal.hide();
+                    
+                    if (this.currentSection === 'evaluations') {
+                        this.loadSectionData('evaluations');
+                    }
+                } catch (error) {
+                    this.showNotification('Error al actualizar la evaluación: ' + error.message, 'error');
+                } finally {
+                    // Restaurar botón
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.innerHTML = originalText;
+                        submitBtn.disabled = false;
+                    }
+                }
+            };
+
+        } catch (error) {
+            this.showNotification('Error al cargar datos para editar: ' + error.message, 'error');
+        }
+    }
     editFeedback(id) { this.showNotification(`Editar retroalimentación ${id} - En desarrollo`, 'info'); }
 
     // Métodos para eliminar
@@ -1967,14 +2897,29 @@ Esto también eliminará todas las evaluaciones asociadas a esta entrega.`;
     }
 
     async deleteEvaluation(id) {
-        if (confirm('¿Estás seguro de que quieres eliminar esta evaluación?')) {
-            try {
+        try {
+            // Obtener datos de la evaluación para mostrar información más específica
+            const evaluation = await apiClient.getEvaluationById(id);
+            const evaluationInfo = evaluation ? 
+                `de la entrega "${evaluation.assignmentTitle || 'Sin título'}" del equipo "${evaluation.teamName || 'Sin equipo'}" (Puntuación: ${evaluation.score || 0})` :
+                `#${id}`;
+
+            const confirmMessage = `¿Estás seguro de que quieres eliminar la evaluación ${evaluationInfo}?
+
+⚠️ ADVERTENCIA: Esta acción no se puede deshacer.
+
+Esto también eliminará toda la retroalimentación asociada a esta evaluación.`;
+
+            if (confirm(confirmMessage)) {
                 await apiClient.deleteEvaluation(id);
-                this.showNotification('Evaluación eliminada correctamente');
-                this.loadSectionData('evaluations');
-            } catch (error) {
-                this.showNotification('Error al eliminar evaluación: ' + error.message, 'error');
+                this.showNotification('Evaluación eliminada correctamente', 'success');
+                
+                if (this.currentSection === 'evaluations') {
+                    this.loadSectionData('evaluations');
+                }
             }
+        } catch (error) {
+            this.showNotification('Error al eliminar evaluación: ' + error.message, 'error');
         }
     }
 
@@ -2183,6 +3128,7 @@ function showCreateAssignmentModal() { app.showCreateAssignmentModal(); }
 function showCreateSubmissionModal() { app.showCreateSubmissionModal(); }
 function showCreateEvaluationModal() { app.showCreateEvaluationModal(); }
 function showCreateFeedbackModal() { app.showCreateFeedbackModal(); }
+function downloadAllEvaluations() { app.downloadAllEvaluations(); }
 
 // Inicializar aplicación cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {

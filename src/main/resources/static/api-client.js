@@ -298,11 +298,25 @@ class ApiClient {
     }
 
     async getEvaluationsBySubmission(submissionId) {
-        return this.makeRequest(`/evaluations/by-submission/${submissionId}`);
+        return this.makeRequest(`/evaluations/submission/${submissionId}`);
+    }
+
+    async getEvaluationsByEvaluator(evaluatorId) {
+        return this.makeRequest(`/evaluations/evaluator/${evaluatorId}`);
+    }
+
+    async getEvaluationsByTeam(teamId) {
+        return this.makeRequest(`/evaluations/team/${teamId}`);
     }
 
     async getEvaluationsByScoreRange(minScore, maxScore) {
-        return this.makeRequest(`/evaluations/by-score-range?minScore=${minScore}&maxScore=${maxScore}`);
+        return this.makeRequest(`/evaluations/score-range?minScore=${minScore}&maxScore=${maxScore}`);
+    }
+
+    async autoEvaluateGitHubCommits(submissionId, evaluatorId) {
+        return this.makeRequest(`/evaluations/auto/${submissionId}/${evaluatorId}`, {
+            method: 'POST'
+        });
     }
 
     // RETROALIMENTACIÓN

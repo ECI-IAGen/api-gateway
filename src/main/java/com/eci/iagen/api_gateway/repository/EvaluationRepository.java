@@ -20,6 +20,8 @@ public interface EvaluationRepository extends JpaRepository<Evaluation, Long> {
 
     List<Evaluation> findByEvaluatorId(Long evaluatorId);
 
+    boolean existsBySubmissionIdAndEvaluatorId(Long submissionId, Long evaluatorId);
+
     @Query("SELECT e FROM Evaluation e WHERE e.submission.id = :submissionId AND e.evaluator.id = :evaluatorId")
     Optional<Evaluation> findBySubmissionIdAndEvaluatorId(@Param("submissionId") Long submissionId,
             @Param("evaluatorId") Long evaluatorId);
