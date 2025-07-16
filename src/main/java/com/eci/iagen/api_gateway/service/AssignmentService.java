@@ -242,13 +242,6 @@ public class AssignmentService {
             throw new IllegalArgumentException("Start date must be before due date");
         }
 
-        LocalDateTime now = LocalDateTime.now();
-        
-        // Advertir si las fechas están muy en el pasado (más de 1 día)
-        if (dueDate.isBefore(now.minus(1, ChronoUnit.DAYS))) {
-            throw new IllegalArgumentException("Due date cannot be more than 1 day in the past");
-        }
-
         // Advertir si el período es muy largo (más de 1 año)
         if (ChronoUnit.DAYS.between(startDate, dueDate) > 365) {
             throw new IllegalArgumentException("Assignment period cannot exceed 365 days");

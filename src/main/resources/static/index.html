@@ -185,20 +185,25 @@
                     <div id="evaluations-section" class="content-section" style="display: none;">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h2><i class="fas fa-star me-2"></i>Gestión de Evaluaciones</h2>
-                            <button class="btn btn-primary" onclick="showCreateEvaluationModal()">
-                                <i class="fas fa-plus me-2"></i>Crear Evaluación
-                            </button>
+                            <div>
+                                <button class="btn btn-success me-2" onclick="downloadAllEvaluations()">
+                                    <i class="fas fa-download me-2"></i>Descargar Evaluaciones
+                                </button>
+                                <button class="btn btn-primary" onclick="showCreateEvaluationModal()">
+                                    <i class="fas fa-plus me-2"></i>Crear Evaluación
+                                </button>
+                            </div>
                         </div>
                         <div class="table-responsive">
-                            <table class="table table-striped">
+                            <table class="table table-striped table-evaluations">
                                 <thead>
                                     <tr>
-                                        <th>ID</th>
-                                        <th>Entrega</th>
-                                        <th>Puntuación</th>
-                                        <th>Comentarios</th>
-                                        <th>Fecha Evaluación</th>
-                                        <th>Acciones</th>
+                                        <th width="8%">ID</th>
+                                        <th width="25%">Entrega</th>
+                                        <th width="15%">Puntuación</th>
+                                        <th width="20%">Evaluador</th>
+                                        <th width="17%">Fecha Evaluación</th>
+                                        <th width="15%">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody id="evaluations-table-body">

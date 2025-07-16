@@ -91,7 +91,8 @@ public class EvaluationController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<EvaluationDTO> updateEvaluation(@PathVariable Long id, @RequestBody EvaluationDTO evaluationDTO) {
+    public ResponseEntity<EvaluationDTO> updateEvaluation(@PathVariable Long id,
+            @RequestBody EvaluationDTO evaluationDTO) {
         try {
             return evaluationService.updateEvaluation(id, evaluationDTO)
                     .map(evaluation -> ResponseEntity.ok(evaluation))
@@ -107,5 +108,20 @@ public class EvaluationController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @PostMapping("/auto/{submissionId}/{evaluatorId}")
+    public ResponseEntity<EvaluationDTO> autoEvaluateGitHubCommits(
+            @PathVariable Long submissionId,
+            @PathVariable Long evaluatorId) {
+        try {
+            EvaluationDTO evaluation = evaluationService.evaluateGitHubCommits(submissionId, evaluatorId);
+            return ResponseEntity.status(HttpStatus.CREATED).body(evaluation);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(null);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);
+        }
     }
 }
