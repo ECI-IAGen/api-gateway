@@ -11,21 +11,21 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Feedback {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "evaluation_id", nullable = false)
     private Evaluation evaluation;
-    
-    @Column(columnDefinition = "TEXT")
+
+    @Column(columnDefinition = "text")
     private String strengths;
-    
-    @Column(columnDefinition = "TEXT")
+
+    @Column(columnDefinition = "text")
     private String improvements;
-    
-    @Column(columnDefinition = "TEXT")
+
+    @Column(columnDefinition = "text")
     private String comments;
 }
