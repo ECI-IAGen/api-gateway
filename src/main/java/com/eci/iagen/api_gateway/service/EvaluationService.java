@@ -210,23 +210,22 @@ public class EvaluationService {
         log.info("Due Date: {}", submission.getAssignment().getDueDate());
         log.info("Submission Date: {}", submission.getSubmittedAt());
         log.info("Total commits found: {}", commits.size());
-        
+
         if (!commits.isEmpty()) {
             // Ordenar commits por fecha para encontrar el último
             commits.sort(Comparator.comparing(CommitInfo::getDate).reversed());
             CommitInfo lastCommit = commits.get(0);
             log.info("Last commit date: {}", lastCommit.getDate());
             log.info("Last commit message: {}", lastCommit.getMessage());
-            
+
             // Calcular días tardíos manualmente para verificar
             LocalDateTime dueDate = submission.getAssignment().getDueDate();
             LocalDateTime lastCommitDate = lastCommit.getDate();
-            
+
             if (lastCommitDate.isAfter(dueDate)) {
                 long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(
-                    dueDate.toLocalDate(), 
-                    lastCommitDate.toLocalDate()
-                );
+                        dueDate.toLocalDate(),
+                        lastCommitDate.toLocalDate());
                 log.info("Manual calculation - Days late: {}", daysBetween);
                 log.info("Expected score: {}", 5.0 - (daysBetween * 0.5));
             } else {
@@ -241,7 +240,7 @@ public class EvaluationService {
                 submission.getSubmittedAt(),
                 submission.getFileUrl() // Asumiendo que fileUrl contiene la URL del repositorio
         );
-        
+
         // Debug: Log de respuesta del microservicio
         log.info("Schedule Compliance Response:");
         log.info("  - Penalized Score: {}", complianceResponse.getPenalizedScore());
@@ -265,7 +264,7 @@ public class EvaluationService {
     private List<CommitInfo> fetchGitHubCommits(String repoUrl) {
         log.info("=== FETCHING GITHUB COMMITS ===");
         log.info("Original repo URL: {}", repoUrl);
-        
+
         String apiUrl = convertToGitHubApiUrl(repoUrl);
         log.info("Converted API URL: {}", apiUrl);
 
@@ -291,21 +290,22 @@ public class EvaluationService {
 
     private String convertToGitHubApiUrl(String repoUrl) {
         log.info("Converting repo URL: {}", repoUrl);
-        
+
         String apiBase = "https://api.github.com/repos/";
         String repoPath = repoUrl.replace("https://github.com/", "").replace(".git", "");
-        
+
         log.info("Extracted repo path: '{}'", repoPath);
-        
+
         // Validar que la URL tiene el formato correcto usuario/repositorio
         if (!repoPath.contains("/") || repoPath.split("/").length < 2) {
             log.error("Invalid GitHub repository URL format. Expected: https://github.com/user/repo, got: {}", repoUrl);
-            throw new RuntimeException("Invalid GitHub repository URL format. Expected: https://github.com/user/repo, got: " + repoUrl);
+            throw new RuntimeException(
+                    "Invalid GitHub repository URL format. Expected: https://github.com/user/repo, got: " + repoUrl);
         }
-        
+
         String finalUrl = apiBase + repoPath + "/commits";
         log.info("Final GitHub API URL: {}", finalUrl);
-        
+
         return finalUrl;
     }
 
@@ -379,7 +379,7 @@ public class EvaluationService {
             log.info("Due Date: {}", dueDate);
             log.info("Submission Date: {}", submissionDate);
             log.info("Number of commits: {}", commits.size());
-            
+
             // Convertir commits internos a DTOs para el microservicio
             List<ScheduleComplianceRequest.CommitInfo> commitDTOs = commits.stream()
                     .map(commit -> new ScheduleComplianceRequest.CommitInfo(
@@ -392,9 +392,9 @@ public class EvaluationService {
             if (!commitDTOs.isEmpty()) {
                 // Ordenar para mostrar el último
                 List<ScheduleComplianceRequest.CommitInfo> sortedCommits = commitDTOs.stream()
-                    .sorted(Comparator.comparing(ScheduleComplianceRequest.CommitInfo::getDate).reversed())
-                    .collect(Collectors.toList());
-                
+                        .sorted(Comparator.comparing(ScheduleComplianceRequest.CommitInfo::getDate).reversed())
+                        .collect(Collectors.toList());
+
                 ScheduleComplianceRequest.CommitInfo lastCommit = sortedCommits.get(0);
                 log.info("Last commit being sent: {} - {}", lastCommit.getDate(), lastCommit.getMessage());
             }
@@ -449,7 +449,8 @@ public class EvaluationService {
 
     /**
      * Método legacy para calcular puntuación basada en commits (fallback)
-     * Ahora usa la misma lógica que Schedule Compliance: penalización por días tardíos
+     * Ahora usa la misma lógica que Schedule Compliance: penalización por días
+     * tardíos
      */
     private EvaluationResult calculateScoreBasedOnCommits(List<CommitInfo> commits, LocalDateTime dueDate) {
         double initialScore = 5.0;
@@ -464,14 +465,13 @@ public class EvaluationService {
         if (!commits.isEmpty()) {
             CommitInfo lastCommit = commits.get(0);
             effectiveDate = lastCommit.getDate();
-            
+
             // Calcular días tardíos usando la misma lógica que Schedule Compliance
             if (effectiveDate.isAfter(dueDate)) {
                 long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(
-                    dueDate.toLocalDate(), 
-                    effectiveDate.toLocalDate()
-                );
-                
+                        dueDate.toLocalDate(),
+                        effectiveDate.toLocalDate());
+
                 // Si es el mismo día pero después de la hora, cuenta como 1 día tardío
                 if (daysBetween == 0 && effectiveDate.isAfter(dueDate)) {
                     lateDays = 1;
@@ -479,15 +479,15 @@ public class EvaluationService {
                     lateDays = Math.max(0, (int) daysBetween);
                 }
             }
-            
-            log.info("Legacy method - Last commit: {}, Due: {}, Days late: {}", 
-                effectiveDate, dueDate, lateDays);
+
+            log.info("Legacy method - Last commit: {}, Due: {}, Days late: {}",
+                    effectiveDate, dueDate, lateDays);
         }
 
         // Aplicar penalización por días tardíos (igual que Schedule Compliance)
         double penalty = lateDays * 0.5;
         double finalScore = Math.max(0.0, initialScore - penalty);
-        
+
         log.info("Legacy method - Penalty: {}, Final score: {}", penalty, finalScore);
 
         // Generar detalles de commits para el JSON
@@ -521,7 +521,8 @@ public class EvaluationService {
         }
     }
 
-    private String buildCriteriaJsonWithDays(List<Map<String, Object>> commitDetails, boolean isLate, int lateDays, double penalty) {
+    private String buildCriteriaJsonWithDays(List<Map<String, Object>> commitDetails, boolean isLate, int lateDays,
+            double penalty) {
         try {
             Map<String, Object> criteria = new LinkedHashMap<>();
             criteria.put("evaluationMethod", "Days-based penalty system (Legacy)");

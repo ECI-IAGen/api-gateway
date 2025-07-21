@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+    <!-- Suppress known false positives or accepted risks -->
+    
+    <!-- Example suppression for Spring Boot test dependencies that are only used in test scope -->
+    <suppress>
+        <notes><![CDATA[
+        Test dependencies are not included in production builds
+        ]]></notes>
+        <gav regex="true">^org\.springframework\.boot:spring-boot-starter-test:.*$</gav>
+        <cpe>cpe:/a:pivotal_software:spring_boot</cpe>
+    </suppress>
+    
+    <!-- Suppress development tools that are not included in production builds -->
+    <suppress>
+        <notes><![CDATA[
+        Development tools are not included in production builds
+        ]]></notes>
+        <gav regex="true">^org\.springframework\.boot:spring-boot-devtools:.*$</gav>
+    </suppress>
+</suppressions>

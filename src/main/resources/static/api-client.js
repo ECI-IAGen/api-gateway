@@ -355,6 +355,41 @@ class ApiClient {
     async getFeedbacksByDateRange(startDate, endDate) {
         return this.makeRequest(`/feedbacks/by-date-range?startDate=${startDate}&endDate=${endDate}`);
     }
+
+    // IMPORTACIÓN EXCEL
+    async importExcel(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const url = `${this.baseUrl}/excel/import`;
+        
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                let errorText = await response.text();
+                try {
+                    const errObj = JSON.parse(errorText);
+                    if (errObj.message) errorText = errObj.message;
+                } catch (e) {
+                    errorText = errorText.split('\n')[0];
+                }
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error uploading Excel file:', error);
+            throw error;
+        }
+    }
+
+    async getExcelFormatInfo() {
+        return this.makeRequest('/excel/format-info');
+    }
 }
 
 // Instancia global del cliente API

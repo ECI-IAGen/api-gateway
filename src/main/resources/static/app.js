@@ -3130,6 +3130,112 @@ function showCreateEvaluationModal() { app.showCreateEvaluationModal(); }
 function showCreateFeedbackModal() { app.showCreateFeedbackModal(); }
 function downloadAllEvaluations() { app.downloadAllEvaluations(); }
 
+// Funciones para importación de Excel
+function showExcelImportModal() {
+    const modal = new bootstrap.Modal(document.getElementById('excelImportModal'));
+    
+    // Limpiar el formulario
+    document.getElementById('excelFile').value = '';
+    document.getElementById('importProgress').classList.add('d-none');
+    document.getElementById('importResults').classList.add('d-none');
+    document.getElementById('importBtn').disabled = false;
+    
+    modal.show();
+}
+
+async function importExcelFile() {
+    const fileInput = document.getElementById('excelFile');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        app.showNotification('Por favor selecciona un archivo Excel', 'error');
+        return;
+    }
+    
+    if (!file.name.toLowerCase().endsWith('.xlsx') && !file.name.toLowerCase().endsWith('.xls')) {
+        app.showNotification('Por favor selecciona un archivo Excel válido (.xlsx o .xls)', 'error');
+        return;
+    }
+    
+    // Mostrar progreso
+    document.getElementById('importProgress').classList.remove('d-none');
+    document.getElementById('importResults').classList.add('d-none');
+    document.getElementById('importBtn').disabled = true;
+    
+    try {
+        const response = await apiClient.importExcel(file);
+        
+        // Ocultar progreso
+        document.getElementById('importProgress').classList.add('d-none');
+        
+        // Mostrar resultados
+        displayImportResults(response);
+        
+        if (response.success) {
+            app.showNotification(response.message, 'success');
+            // Recargar datos de usuarios si estamos en esa sección
+            if (app.currentSection === 'users') {
+                await app.loadUsers();
+            }
+        } else {
+            app.showNotification(response.message, 'error');
+        }
+        
+    } catch (error) {
+        document.getElementById('importProgress').classList.add('d-none');
+        document.getElementById('importBtn').disabled = false;
+        app.showNotification('Error al importar archivo: ' + error.message, 'error');
+        console.error('Error durante importación:', error);
+    }
+}
+
+function displayImportResults(response) {
+    const resultsContainer = document.getElementById('importResults');
+    
+    let resultsHtml = '<div class="mt-3">';
+    
+    if (response.success) {
+        resultsHtml += '<div class="alert alert-success">';
+        resultsHtml += '<h6><i class="fas fa-check-circle me-2"></i>Importación Exitosa</h6>';
+        resultsHtml += `<p>${response.message}</p>`;
+        
+        if (response.stats) {
+            resultsHtml += '<ul class="mb-0">';
+            resultsHtml += `<li>Roles creados: ${response.stats.rolesCreated}</li>`;
+            resultsHtml += `<li>Usuarios creados: ${response.stats.usersCreated}</li>`;
+            resultsHtml += `<li>Usuarios actualizados: ${response.stats.usersUpdated}</li>`;
+            resultsHtml += `<li>Equipos creados: ${response.stats.teamsCreated}</li>`;
+            resultsHtml += `<li>Total procesados: ${response.stats.totalProcessed}</li>`;
+            resultsHtml += '</ul>';
+        }
+        resultsHtml += '</div>';
+    } else {
+        resultsHtml += '<div class="alert alert-danger">';
+        resultsHtml += '<h6><i class="fas fa-exclamation-triangle me-2"></i>Error en la Importación</h6>';
+        resultsHtml += `<p>${response.message}</p>`;
+        resultsHtml += '</div>';
+    }
+    
+    if (response.errors && response.errors.length > 0) {
+        resultsHtml += '<div class="alert alert-warning">';
+        resultsHtml += '<h6><i class="fas fa-exclamation-circle me-2"></i>Errores/Advertencias</h6>';
+        resultsHtml += '<ul class="mb-0">';
+        response.errors.forEach(error => {
+            resultsHtml += `<li>${error}</li>`;
+        });
+        resultsHtml += '</ul>';
+        resultsHtml += '</div>';
+    }
+    
+    resultsHtml += '</div>';
+    
+    resultsContainer.innerHTML = resultsHtml;
+    resultsContainer.classList.remove('d-none');
+    
+    // Re-habilitar botón
+    document.getElementById('importBtn').disabled = false;
+}
+
 // Inicializar aplicación cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
     window.app = new App();
