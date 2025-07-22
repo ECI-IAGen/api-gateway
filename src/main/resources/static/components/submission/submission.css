@@ -1,0 +1,87 @@
+/* Estilos específicos para el componente de entregas */
+.submissions-section {
+    animation: fadeIn 0.3s ease-in;
+}
+
+#submissions-section .table th {
+    background-color: #f8f9fa;
+    border-top: none;
+    font-weight: 600;
+}
+
+#submissions-section .action-buttons {
+    white-space: nowrap;
+}
+
+#submissions-section .action-buttons .btn {
+    margin: 0 2px;
+}
+
+#submissions-section .text-truncate {
+    max-width: 150px;
+}
+
+#submissions-section .file-link {
+    color: #0d6efd;
+    text-decoration: none;
+}
+
+#submissions-section .file-link:hover {
+    text-decoration: underline;
+}
+
+#submissions-section .submission-status {
+    font-size: 0.75em;
+    padding: 0.25rem 0.5rem;
+}
+
+#submissions-section .date-display {
+    font-size: 0.875em;
+    line-height: 1.2;
+}
+
+/* Modal específico para entregas */
+#submission-modal-container .modal-dialog {
+    max-width: 700px;
+}
+
+#submission-modal-container .form-control:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+#submission-modal-container .github-info {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+}
+
+#submission-modal-container .file-upload-area {
+    border: 2px dashed #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    text-align: center;
+    background-color: #f8f9fa;
+    transition: border-color 0.15s ease-in-out;
+}
+
+#submission-modal-container .file-upload-area:hover {
+    border-color: #86b7fe;
+}
+
+/* Responsive para entregas */
+@media (max-width: 768px) {
+    #submissions-section .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    #submissions-section .btn {
+        font-size: 0.875rem;
+        padding: 0.375rem 0.75rem;
+    }
+    
+    #submissions-section .text-truncate {
+        max-width: 100px;
+    }
+}

@@ -20,6 +20,9 @@ public class Feedback {
     @JoinColumn(name = "evaluation_id", nullable = false)
     private Evaluation evaluation;
     
+    @Column(name = "feedback_type", nullable = false)
+    private String feedbackType;
+    
     @Column(columnDefinition = "TEXT")
     private String strengths;
     

@@ -15,4 +15,15 @@ public class AssignmentDTO {
     private String description;
     private LocalDateTime startDate;
     private LocalDateTime dueDate;
+    private Long classId;
+    private String className;
+    
+    // Constructor sin información de clase para compatibilidad
+    public AssignmentDTO(Long id, String title, String description, LocalDateTime startDate, LocalDateTime dueDate) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.startDate = startDate;
+        this.dueDate = dueDate;
+    }
 }

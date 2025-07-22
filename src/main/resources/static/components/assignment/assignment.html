@@ -1,0 +1,30 @@
+<!-- Sección de Asignaciones -->
+<div id="assignments-section" class="content-section" style="display: none;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2><i class="fas fa-tasks me-2"></i>Gestión de Asignaciones</h2>
+        <button class="btn btn-primary" onclick="assignmentComponent.showCreateModal()">
+            <i class="fas fa-plus me-2"></i>Crear Asignación
+        </button>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Título</th>
+                    <th>Descripción</th>
+                    <th>Fechas</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="assignments-table-body">
+                <!-- Los datos se cargarán aquí -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal para crear/editar asignación -->
+<div id="assignment-modal-container">
+    <!-- Los modales se generarán dinámicamente -->
+</div>

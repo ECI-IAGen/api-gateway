@@ -1,0 +1,44 @@
+/* Estilos específicos para el componente de roles */
+.roles-section {
+    animation: fadeIn 0.3s ease-in;
+}
+
+#roles-section .table th {
+    background-color: #f8f9fa;
+    border-top: none;
+    font-weight: 600;
+}
+
+#roles-section .action-buttons {
+    white-space: nowrap;
+}
+
+#roles-section .action-buttons .btn {
+    margin: 0 2px;
+}
+
+#roles-section .badge {
+    font-size: 0.75em;
+}
+
+/* Modal específico para roles */
+#role-modal-container .modal-dialog {
+    max-width: 500px;
+}
+
+#role-modal-container .form-control:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Responsive para roles */
+@media (max-width: 768px) {
+    #roles-section .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    #roles-section .btn {
+        font-size: 0.875rem;
+        padding: 0.375rem 0.75rem;
+    }
+}

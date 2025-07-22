@@ -1,0 +1,61 @@
+/* Estilos específicos para el componente de equipos */
+.teams-section {
+    animation: fadeIn 0.3s ease-in;
+}
+
+#teams-section .table th {
+    background-color: #f8f9fa;
+    border-top: none;
+    font-weight: 600;
+}
+
+#teams-section .action-buttons {
+    white-space: nowrap;
+}
+
+#teams-section .action-buttons .btn {
+    margin: 0 2px;
+}
+
+#teams-section .text-truncate {
+    max-width: 200px;
+}
+
+#teams-section .member-count {
+    font-size: 0.875em;
+    background-color: #e9ecef;
+    color: #495057;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+}
+
+/* Modal específico para equipos */
+#team-modal-container .modal-dialog {
+    max-width: 600px;
+}
+
+#team-modal-container .form-control:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+#team-modal-container .member-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+}
+
+/* Responsive para equipos */
+@media (max-width: 768px) {
+    #teams-section .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    #teams-section .btn {
+        font-size: 0.875rem;
+        padding: 0.375rem 0.75rem;
+    }
+}

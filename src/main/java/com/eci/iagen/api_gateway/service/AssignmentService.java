@@ -2,7 +2,9 @@ package com.eci.iagen.api_gateway.service;
 
 import com.eci.iagen.api_gateway.dto.AssignmentDTO;
 import com.eci.iagen.api_gateway.entity.Assignment;
+import com.eci.iagen.api_gateway.entity.Class;
 import com.eci.iagen.api_gateway.repository.AssignmentRepository;
+import com.eci.iagen.api_gateway.repository.ClassRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +20,7 @@ import java.util.stream.Collectors;
 public class AssignmentService {
 
     private final AssignmentRepository assignmentRepository;
+    private final ClassRepository classRepository;
 
     // ================== CRUD BÁSICO ==================
     
@@ -51,6 +54,13 @@ public class AssignmentService {
         assignment.setDescription(assignmentDTO.getDescription() != null ? assignmentDTO.getDescription().trim() : null);
         assignment.setStartDate(assignmentDTO.getStartDate());
         assignment.setDueDate(assignmentDTO.getDueDate());
+        
+        // Asignar la clase si se proporciona
+        if (assignmentDTO.getClassId() != null) {
+            Class classEntity = classRepository.findById(assignmentDTO.getClassId())
+                    .orElseThrow(() -> new IllegalArgumentException("Class not found with id: " + assignmentDTO.getClassId()));
+            assignment.setClassEntity(classEntity);
+        }
 
         Assignment savedAssignment = assignmentRepository.save(assignment);
         return convertToDTO(savedAssignment);
@@ -76,6 +86,15 @@ public class AssignmentService {
                     assignment.setDescription(assignmentDTO.getDescription() != null ? assignmentDTO.getDescription().trim() : null);
                     assignment.setStartDate(assignmentDTO.getStartDate());
                     assignment.setDueDate(assignmentDTO.getDueDate());
+                    
+                    // Actualizar la clase si se proporciona
+                    if (assignmentDTO.getClassId() != null) {
+                        Class classEntity = classRepository.findById(assignmentDTO.getClassId())
+                                .orElseThrow(() -> new IllegalArgumentException("Class not found with id: " + assignmentDTO.getClassId()));
+                        assignment.setClassEntity(classEntity);
+                    } else {
+                        assignment.setClassEntity(null);
+                    }
 
                     return convertToDTO(assignmentRepository.save(assignment));
                 });
@@ -253,12 +272,20 @@ public class AssignmentService {
             return null;
         }
         
-        return new AssignmentDTO(
+        AssignmentDTO dto = new AssignmentDTO(
                 assignment.getId(),
                 assignment.getTitle(),
                 assignment.getDescription(),
                 assignment.getStartDate(),
                 assignment.getDueDate()
         );
+        
+        // Añadir información de la clase si está disponible
+        if (assignment.getClassEntity() != null) {
+            dto.setClassId(assignment.getClassEntity().getId());
+            dto.setClassName(assignment.getClassEntity().getName());
+        }
+        
+        return dto;
     }
 }

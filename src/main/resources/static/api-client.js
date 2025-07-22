@@ -83,12 +83,16 @@ class ApiClient {
         });
     }
 
-    async getUsersByRole(roleId) {
-        return this.makeRequest(`/users/by-role/${roleId}`);
+    async getUserByEmail(email) {
+        return this.makeRequest(`/users/email/${email}`);
     }
 
-    async getUsersByTeam(teamId) {
-        return this.makeRequest(`/users/by-team/${teamId}`);
+    async getUsersByRoleId(roleId) {
+        return this.makeRequest(`/users/role/${roleId}`);
+    }
+
+    async getUsersByNameContaining(name) {
+        return this.makeRequest(`/users/search?name=${name}`);
     }
 
     // ROLES
@@ -98,6 +102,10 @@ class ApiClient {
 
     async getRoleById(id) {
         return this.makeRequest(`/roles/${id}`);
+    }
+
+    async getRoleByName(name) {
+        return this.makeRequest(`/roles/name/${name}`);
     }
 
     async createRole(role) {
@@ -149,8 +157,35 @@ class ApiClient {
         });
     }
 
-    async getTeamsByUser(userId) {
-        return this.makeRequest(`/teams/by-user/${userId}`);
+    async getTeamByName(name) {
+        return this.makeRequest(`/teams/name/${name}`);
+    }
+
+    async getTeamsByUserId(userId) {
+        return this.makeRequest(`/teams/user/${userId}`);
+    }
+
+    async getTeamsByNameContaining(name) {
+        return this.makeRequest(`/teams/search?name=${name}`);
+    }
+
+    async addUserToTeam(teamId, userId) {
+        return this.makeRequest(`/teams/${teamId}/users/${userId}`, {
+            method: 'POST'
+        });
+    }
+
+    async removeUserFromTeam(teamId, userId) {
+        return this.makeRequest(`/teams/${teamId}/users/${userId}`, {
+            method: 'DELETE'
+        });
+    }
+
+    async updateTeamUsers(teamId, userIds) {
+        return this.makeRequest(`/teams/${teamId}/users`, {
+            method: 'PUT',
+            body: userIds
+        });
     }
 
     // ASIGNACIONES
@@ -183,44 +218,57 @@ class ApiClient {
     }
 
     async getAssignmentsByDateRange(startDate, endDate) {
-        return this.makeRequest(`/assignments/by-date-range?startDate=${startDate}&endDate=${endDate}`);
+        return this.makeRequest(`/assignments/date-range?startDate=${startDate}&endDate=${endDate}`);
     }
 
-    // HORARIOS
-    async getSchedules() {
-        return this.makeRequest('/schedules');
+    async searchAssignmentsByTitle(title) {
+        return this.makeRequest(`/assignments/search?title=${title}`);
     }
 
-    async getScheduleById(id) {
-        return this.makeRequest(`/schedules/${id}`);
+    async searchAssignmentsAdvanced(searchTerm) {
+        return this.makeRequest(`/assignments/search/advanced?searchTerm=${searchTerm}`);
     }
 
-    async createSchedule(schedule) {
-        return this.makeRequest('/schedules', {
-            method: 'POST',
-            body: schedule
-        });
+    async getUpcomingAssignments() {
+        return this.makeRequest('/assignments/upcoming');
     }
 
-    async updateSchedule(id, schedule) {
-        return this.makeRequest(`/schedules/${id}`, {
-            method: 'PUT',
-            body: schedule
-        });
+    async getPastAssignments() {
+        return this.makeRequest('/assignments/past');
     }
 
-    async deleteSchedule(id) {
-        return this.makeRequest(`/schedules/${id}`, {
+    async getActiveAssignments() {
+        return this.makeRequest('/assignments/active');
+    }
+
+    async getAssignmentsDueWithinDays(days) {
+        return this.makeRequest(`/assignments/due-within-days/${days}`);
+    }
+
+    async getAssignmentsDueWithinHours(hours) {
+        return this.makeRequest(`/assignments/due-within-hours/${hours}`);
+    }
+
+    async getAssignmentStatistics() {
+        return this.makeRequest('/assignments/stats');
+    }
+
+    async countUpcomingAssignments() {
+        return this.makeRequest('/assignments/count/upcoming');
+    }
+
+    async countPastAssignments() {
+        return this.makeRequest('/assignments/count/past');
+    }
+
+    async countActiveAssignments() {
+        return this.makeRequest('/assignments/count/active');
+    }
+
+    async deleteOldAssignments(daysOld) {
+        return this.makeRequest(`/assignments/cleanup/${daysOld}`, {
             method: 'DELETE'
         });
-    }
-
-    async getSchedulesByAssignment(assignmentId) {
-        return this.makeRequest(`/schedules/by-assignment/${assignmentId}`);
-    }
-
-    async getSchedulesByDay(day) {
-        return this.makeRequest(`/schedules/by-day/${day}`);
     }
 
     // ENTREGAS
@@ -266,6 +314,14 @@ class ApiClient {
 
     async getSubmissionByAssignmentAndTeam(assignmentId, teamId) {
         return this.makeRequest(`/submissions/assignment/${assignmentId}/team/${teamId}`);
+    }
+
+    async getSubmissionsBetweenDates(startDate, endDate) {
+        return this.makeRequest(`/submissions/between?startDate=${startDate}&endDate=${endDate}`);
+    }
+
+    async getSubmissionsByAssignmentOrderByDate(assignmentId) {
+        return this.makeRequest(`/submissions/assignment/${assignmentId}/ordered`);
     }
 
     // EVALUACIONES
@@ -349,13 +405,92 @@ class ApiClient {
     }
 
     async getFeedbacksByEvaluation(evaluationId) {
-        return this.makeRequest(`/feedbacks/by-evaluation/${evaluationId}`);
+        return this.makeRequest(`/feedbacks/evaluation/${evaluationId}`);
     }
 
-    async getFeedbacksByDateRange(startDate, endDate) {
-        return this.makeRequest(`/feedbacks/by-date-range?startDate=${startDate}&endDate=${endDate}`);
+    async getFeedbacksBySubmission(submissionId) {
+        return this.makeRequest(`/feedbacks/submission/${submissionId}`);
+    }
+
+    async getFeedbacksByEvaluator(evaluatorId) {
+        return this.makeRequest(`/feedbacks/evaluator/${evaluatorId}`);
+    }
+
+    async getFeedbacksByTeam(teamId) {
+        return this.makeRequest(`/feedbacks/team/${teamId}`);
+    }
+
+    async getFeedbacksByAssignment(assignmentId) {
+        return this.makeRequest(`/feedbacks/assignment/${assignmentId}`);
+    }
+
+    async getFeedbacksWithStrengths() {
+        return this.makeRequest('/feedbacks/with-strengths');
+    }
+
+    async getFeedbacksWithImprovements() {
+        return this.makeRequest('/feedbacks/with-improvements');
+    }
+
+    // ================== MÉTODOS DE CLASES ==================
+
+    async getClasses() {
+        return this.makeRequest('/classes');
+    }
+
+    async getClassById(id) {
+        return this.makeRequest(`/classes/${id}`);
+    }
+
+    async createClass(classData) {
+        return this.makeRequest('/classes', {
+            method: 'POST',
+            body: classData
+        });
+    }
+
+    async updateClass(id, classData) {
+        return this.makeRequest(`/classes/${id}`, {
+            method: 'PUT',
+            body: classData
+        });
+    }
+
+    async deleteClass(id) {
+        return this.makeRequest(`/classes/${id}`, {
+            method: 'DELETE'
+        });
+    }
+
+    async addTeamToClass(classId, teamId) {
+        return this.makeRequest(`/classes/${classId}/teams/${teamId}`, {
+            method: 'POST'
+        });
+    }
+
+    async removeTeamFromClass(classId, teamId) {
+        return this.makeRequest(`/classes/${classId}/teams/${teamId}`, {
+            method: 'DELETE'
+        });
+    }
+
+    async getClassTeams(classId) {
+        return this.makeRequest(`/classes/${classId}/teams`);
+    }
+
+    async getClassesByProfessor(professorId) {
+        return this.makeRequest(`/classes/professor/${professorId}`);
+    }
+
+    async getClassesByTeam(teamId) {
+        return this.makeRequest(`/classes/team/${teamId}`);
     }
 }
 
 // Instancia global del cliente API
 const apiClient = new ApiClient();
+
+// Exportar al objeto window para que esté disponible globalmente
+window.apiClient = apiClient;
+
+console.log('apiClient inicializado y disponible globalmente:', typeof window.apiClient);

@@ -4,8 +4,10 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "submission")
@@ -31,4 +33,9 @@ public class Submission {
     
     @Column(name = "file_url")
     private String fileUrl;
+    
+    // Multiple evaluations for this submission
+    @OneToMany(mappedBy = "submission", fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<Evaluation> evaluations;
 }

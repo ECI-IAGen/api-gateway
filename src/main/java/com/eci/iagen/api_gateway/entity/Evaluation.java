@@ -4,9 +4,11 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "evaluation")
@@ -27,6 +29,9 @@ public class Evaluation {
     @JoinColumn(name = "evaluator_id", nullable = false)
     private User evaluator;
     
+    @Column(name = "evaluation_type", nullable = false)
+    private String evaluationType;
+    
     @Column(precision = 5, scale = 2)
     private BigDecimal score;
     
@@ -35,6 +40,11 @@ public class Evaluation {
     
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+    
+    // Feedback for this evaluation
+    @OneToMany(mappedBy = "evaluation", fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<Feedback> feedbacks;
     
     @PrePersist
     protected void onCreate() {
