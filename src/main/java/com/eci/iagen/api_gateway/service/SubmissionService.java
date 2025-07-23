@@ -26,7 +26,7 @@ public class SubmissionService {
 
     @Transactional(readOnly = true)
     public List<SubmissionDTO> getAllSubmissions() {
-        return submissionRepository.findAll().stream()
+        return submissionRepository.findAllWithAssignmentAndTeam().stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }

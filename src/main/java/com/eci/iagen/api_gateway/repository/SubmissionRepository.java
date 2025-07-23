@@ -13,6 +13,10 @@ import java.util.Optional;
 @Repository
 public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     
+    // Método optimizado para cargar todas las entregas con sus relaciones
+    @Query("SELECT s FROM Submission s LEFT JOIN FETCH s.assignment LEFT JOIN FETCH s.team")
+    List<Submission> findAllWithAssignmentAndTeam();
+    
     List<Submission> findByAssignmentId(Long assignmentId);
     List<Submission> findByTeamId(Long teamId);
     

@@ -3,6 +3,7 @@ package com.eci.iagen.api_gateway.controller;
 import com.eci.iagen.api_gateway.dto.EvaluationDTO;
 import com.eci.iagen.api_gateway.service.EvaluationService;
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,8 @@ import java.util.List;
 public class EvaluationController {
 
     private final EvaluationService evaluationService;
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(EvaluationController.class);
+
 
     @GetMapping
     public ResponseEntity<List<EvaluationDTO>> getAllEvaluations() {
@@ -115,6 +118,7 @@ public class EvaluationController {
             @PathVariable Long submissionId,
             @PathVariable Long evaluatorId) {
         try {
+            logger.info("Auto-evaluating submission {} by evaluator {}", submissionId, evaluatorId);
             EvaluationDTO evaluation = evaluationService.evaluateGitHubCommits(submissionId, evaluatorId);
             return ResponseEntity.status(HttpStatus.CREATED).body(evaluation);
         } catch (IllegalArgumentException e) {

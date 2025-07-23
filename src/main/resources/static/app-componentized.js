@@ -18,16 +18,16 @@ class App {
     async init() {
         // Cargar utilidades compartidas
         await this.loadSharedResources();
-        
+
         // Inicializar componentes
         await this.initializeComponents();
-        
+
         // Cargar todos los datos iniciales
         await this.loadInitialData();
-        
+
         // Mostrar sección de usuarios por defecto
         this.showSection('users');
-        
+
         // Forzar renderizado después de 1 segundo para asegurar que todo esté listo
         setTimeout(() => {
             console.log('Forzando renderizado de usuarios...');
@@ -36,21 +36,21 @@ class App {
                 this.components.user.render();
             }
         }, 1000);
-        
+
         // Agregar función de prueba global
         window.testUserRender = () => {
             console.log('=== TEST USER RENDER ===');
             console.log('Componente user:', this.components.user);
             console.log('Datos users:', this.loadedData.users);
             console.log('Elemento tbody:', document.getElementById('users-table-body'));
-            
+
             if (this.components.user) {
                 this.components.user.data = this.loadedData.users;
                 this.components.user.render();
                 console.log('Render ejecutado');
             }
         };
-        
+
         // Método para recargar datos de usuarios directamente
         window.reloadUsers = async () => {
             console.log('=== RELOAD USERS ===');
@@ -65,6 +65,67 @@ class App {
                 console.error('Error recargando usuarios:', error);
             }
         };
+
+        // Método para probar el componente de roles
+        window.testRoleComponent = () => {
+            console.log('=== TEST ROLE COMPONENT ===');
+            console.log('Componente role:', this.components.role);
+            console.log('Datos roles:', this.loadedData.roles);
+            console.log('Elemento tbody roles:', document.getElementById('roles-table-body'));
+
+            if (this.components.role) {
+                this.components.role.data = this.loadedData.roles;
+                this.components.role.render();
+                console.log('Render ejecutado para roles');
+            } else {
+                console.error('Componente de roles no encontrado');
+            }
+        };
+
+        // Método para recargar datos de roles directamente
+        window.reloadRoles = async () => {
+            console.log('=== RELOAD ROLES ===');
+            try {
+                if (this.components.role) {
+                    await this.components.role.loadData();
+                    console.log('Roles recargados exitosamente');
+                } else {
+                    console.error('Componente de roles no encontrado');
+                }
+            } catch (error) {
+                console.error('Error recargando roles:', error);
+            }
+        };
+
+        // Función para verificar el estado del DOM para roles
+        window.checkRolesDOMState = () => {
+            console.log('=== CHECKING ROLES DOM STATE ===');
+            const rolesSection = document.getElementById('roles-section');
+            const rolesTableBody = document.getElementById('roles-table-body');
+            const allSections = document.querySelectorAll('.content-section');
+            
+            console.log('Roles section found:', !!rolesSection);
+            console.log('Roles section display:', rolesSection?.style.display);
+            console.log('Roles table body found:', !!rolesTableBody);
+            console.log('Current section:', this.currentSection);
+            console.log('All sections:', Array.from(allSections).map(s => ({
+                id: s.id,
+                display: s.style.display,
+                visible: s.style.display !== 'none'
+            })));
+
+            if (rolesTableBody) {
+                console.log('Table body content:', rolesTableBody.innerHTML);
+                console.log('Table body parent:', rolesTableBody.parentElement);
+            }
+
+            return {
+                rolesSection: !!rolesSection,
+                rolesSectionVisible: rolesSection?.style.display !== 'none',
+                rolesTableBody: !!rolesTableBody,
+                currentSection: this.currentSection
+            };
+        };
     }
 
     async loadSharedResources() {
@@ -78,7 +139,7 @@ class App {
 
     async initializeComponents() {
         console.log('Inicializando componentes...');
-        
+
         // Verificar que apiClient esté disponible
         if (!window.apiClient) {
             console.error('apiClient no está disponible en initializeComponents');
@@ -110,42 +171,42 @@ class App {
 
         // Instanciar solo los componentes disponibles
         this.components = {};
-        
+
         if (window.UserComponent) {
             this.components.user = new UserComponent();
             window.userComponent = this.components.user;
         }
-        
+
         if (window.RoleComponent) {
             this.components.role = new RoleComponent();
             window.roleComponent = this.components.role;
         }
-        
+
         if (window.TeamComponent) {
             this.components.team = new TeamComponent();
             window.teamComponent = this.components.team;
         }
-        
+
         if (window.ClassComponent) {
             this.components.class = new ClassComponent();
             window.classComponent = this.components.class;
         }
-        
+
         if (window.AssignmentComponent) {
             this.components.assignment = new AssignmentComponent();
             window.assignmentComponent = this.components.assignment;
         }
-        
+
         if (window.SubmissionComponent) {
             this.components.submission = new SubmissionComponent();
             window.submissionComponent = this.components.submission;
         }
-        
+
         if (window.EvaluationComponent) {
             this.components.evaluation = new EvaluationComponent();
             window.evaluationComponent = this.components.evaluation;
         }
-        
+
         if (window.FeedbackComponent) {
             this.components.feedback = new FeedbackComponent();
             window.feedbackComponent = this.components.feedback;
@@ -189,7 +250,7 @@ class App {
         } catch (error) {
             console.error('Error cargando datos iniciales:', error);
             this.showNotification('Error al cargar datos iniciales: ' + error.message, 'error');
-            
+
             // Inicializar con arrays vacíos si hay error
             this.loadedData = {
                 users: [],
@@ -212,6 +273,8 @@ class App {
 
     // Navegación entre secciones
     async showSection(section) {
+        console.log(`showSection llamado con: ${section}`);
+        
         // Mapear nombres de sección si es necesario
         const sectionMap = {
             'users': 'user',
@@ -223,9 +286,11 @@ class App {
             'evaluations': 'evaluation',
             'feedback': 'feedback'
         };
-        
+
         const componentKey = sectionMap[section] || section;
         const sectionId = section;
+
+        console.log(`componentKey: ${componentKey}, sectionId: ${sectionId}`);
 
         // Ocultar todas las secciones
         document.querySelectorAll('.content-section').forEach(el => {
@@ -237,8 +302,11 @@ class App {
 
         // Mostrar la sección seleccionada
         const sectionElement = document.getElementById(`${sectionId}-section`);
+        console.log(`Buscando elemento: ${sectionId}-section, encontrado: ${!!sectionElement}`);
+        
         if (sectionElement) {
             sectionElement.style.display = 'block';
+            console.log(`Sección ${sectionId}-section mostrada`);
         } else {
             console.error(`Sección ${sectionId}-section no encontrada`);
         }
@@ -247,7 +315,7 @@ class App {
         document.querySelectorAll('.list-group-item').forEach(el => {
             el.classList.remove('active');
         });
-        
+
         // Buscar el item de menú correspondiente a la sección
         const navItem = document.querySelector(`.list-group-item[onclick*=\"${sectionId}\"]`);
         if (navItem) {
@@ -255,12 +323,17 @@ class App {
         }
 
         this.currentSection = componentKey;
+        console.log(`Llamando loadSectionData con: ${componentKey}`);
+        
+        // Añadir un pequeño delay para asegurar que el DOM se haya actualizado
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         await this.loadSectionData(componentKey);
     }
 
     async loadComponentTemplate(section) {
         const sectionElement = document.getElementById(`${section}-section`);
-        
+
         // Las secciones ya están en el HTML, no necesitamos cargar templates dinámicamente
         // Este método se mantiene para compatibilidad futura
         if (!sectionElement) {
@@ -271,9 +344,14 @@ class App {
     // Cargar datos de la sección
     async loadSectionData(section) {
         try {
+            console.log(`loadSectionData iniciado para: ${section}`);
+            
             const component = this.components[section];
+            console.log(`Componente encontrado para ${section}:`, !!component);
+            
             if (!component) {
                 console.error(`Componente ${section} no encontrado`);
+                console.log('Componentes disponibles:', Object.keys(this.components));
                 return;
             }
 
@@ -289,12 +367,13 @@ class App {
 
             // Asignar datos del cache al componente
             component.data = cachedData;
+            console.log(`Datos asignados al componente ${section}:`, component.data?.length || 0, 'elementos');
 
             // Si no hay datos en cache, cargar desde el servidor
             if (cachedData.length === 0) {
                 this.showLoading(true);
                 console.log(`Cargando datos de ${section} desde el servidor...`);
-                
+
                 if (component.loadData) {
                     await component.loadData();
                     // Actualizar cache con los nuevos datos
@@ -308,6 +387,7 @@ class App {
                 if (component.render) {
                     console.log(`Llamando render() para ${section}`);
                     component.render();
+                    console.log(`Render completado para ${section}`);
                 } else {
                     console.warn(`Componente ${section} no tiene método render`);
                 }
@@ -324,7 +404,7 @@ class App {
     getSectionDataKey(section) {
         const sectionToDataKey = {
             'user': 'users',
-            'role': 'roles', 
+            'role': 'roles',
             'team': 'teams',
             'class': 'classes',
             'assignment': 'assignments',
@@ -349,9 +429,9 @@ class App {
     showNotification(message, type = 'success') {
         const toast = document.getElementById('notification-toast');
         const toastBody = toast.querySelector('.toast-body');
-        
+
         toastBody.textContent = message;
-        
+
         // Cambiar color según tipo
         toast.className = 'toast';
         if (type === 'error') {
@@ -369,24 +449,26 @@ class App {
         try {
             this.showLoading(true);
             console.log('Refrescando todos los datos...');
-            
+
             // Cargar datos en paralelo
             const promises = [
                 apiClient.getUsers(),
                 apiClient.getRoles(),
                 apiClient.getTeams(),
+                apiClient.getClasses(),
                 apiClient.getAssignments(),
                 apiClient.getSubmissions(),
                 apiClient.getEvaluations(),
                 apiClient.getFeedbacks()
             ];
 
-            const [users, roles, teams, assignments, submissions, evaluations, feedbacks] = await Promise.all(promises);
+            const [users, roles, teams, classes, assignments, submissions, evaluations, feedbacks] = await Promise.all(promises);
 
             this.loadedData = {
                 users: users || [],
                 roles: roles || [],
                 teams: teams || [],
+                classes: classes || [],
                 assignments: assignments || [],
                 submissions: submissions || [],
                 evaluations: evaluations || [],
@@ -434,36 +516,36 @@ function showSection(section) {
 }
 
 // Funciones globales para crear entidades (delegando a componentes)
-function showCreateUserModal() { 
-    if (userComponent) userComponent.showCreateModal(); 
+function showCreateUserModal() {
+    if (userComponent) userComponent.showCreateModal();
 }
 
-function showCreateRoleModal() { 
-    if (roleComponent) roleComponent.showCreateModal(); 
+function showCreateRoleModal() {
+    if (roleComponent) roleComponent.showCreateModal();
 }
 
-function showCreateTeamModal() { 
-    if (teamComponent) teamComponent.showCreateModal(); 
+function showCreateTeamModal() {
+    if (teamComponent) teamComponent.showCreateModal();
 }
 
-function showCreateAssignmentModal() { 
-    if (assignmentComponent) assignmentComponent.showCreateModal(); 
+function showCreateAssignmentModal() {
+    if (assignmentComponent) assignmentComponent.showCreateModal();
 }
 
-function showCreateSubmissionModal() { 
-    if (submissionComponent) submissionComponent.showCreateModal(); 
+function showCreateSubmissionModal() {
+    if (submissionComponent) submissionComponent.showCreateModal();
 }
 
-function showCreateEvaluationModal() { 
-    if (evaluationComponent) evaluationComponent.showCreateModal(); 
+function showCreateEvaluationModal() {
+    if (evaluationComponent) evaluationComponent.showCreateModal();
 }
 
-function showCreateFeedbackModal() { 
-    if (feedbackComponent) feedbackComponent.showCreateModal(); 
+function showCreateFeedbackModal() {
+    if (feedbackComponent) feedbackComponent.showCreateModal();
 }
 
-function downloadAllEvaluations() { 
-    if (evaluationComponent) evaluationComponent.downloadAll(); 
+function downloadAllEvaluations() {
+    if (evaluationComponent) evaluationComponent.downloadAll();
 }
 
 // Función global para refrescar datos
@@ -471,6 +553,113 @@ function refreshAllData() {
     if (window.app) {
         window.app.refreshAllData();
     }
+}
+
+// Funciones para importación de Excel
+function showExcelImportModal() {
+    const modal = new bootstrap.Modal(document.getElementById('excelImportModal'));
+
+    // Limpiar el formulario
+    document.getElementById('excelFile').value = '';
+    document.getElementById('importProgress').classList.add('d-none');
+    document.getElementById('importResults').classList.add('d-none');
+    document.getElementById('importBtn').disabled = false;
+
+    modal.show();
+}
+
+async function importExcelFile() {
+    const fileInput = document.getElementById('excelFile');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        app.showNotification('Por favor selecciona un archivo Excel', 'error');
+        return;
+    }
+
+    if (!file.name.toLowerCase().endsWith('.xlsx') && !file.name.toLowerCase().endsWith('.xls')) {
+        app.showNotification('Por favor selecciona un archivo Excel válido (.xlsx o .xls)', 'error');
+        return;
+    }
+
+    // Mostrar progreso
+    document.getElementById('importProgress').classList.remove('d-none');
+    document.getElementById('importResults').classList.add('d-none');
+    document.getElementById('importBtn').disabled = true;
+
+    try {
+        const response = await apiClient.importExcel(file);
+
+        // Ocultar progreso
+        document.getElementById('importProgress').classList.add('d-none');
+
+        // Mostrar resultados
+        displayImportResults(response);
+
+        if (response.success) {
+            app.showNotification(response.message, 'success');
+            // Recargar datos de usuarios si estamos en esa sección
+            if (app.currentSection === 'users') {
+                await app.loadUsers();
+            }
+        } else {
+            app.showNotification(response.message, 'error');
+        }
+
+    } catch (error) {
+        document.getElementById('importProgress').classList.add('d-none');
+        document.getElementById('importBtn').disabled = false;
+        app.showNotification('Error al importar archivo: ' + error.message, 'error');
+        console.error('Error durante importación:', error);
+    }
+}
+
+function displayImportResults(response) {
+    const resultsContainer = document.getElementById('importResults');
+
+    let resultsHtml = '<div class="mt-3">';
+
+    if (response.success) {
+        resultsHtml += '<div class="alert alert-success">';
+        resultsHtml += '<h6><i class="fas fa-check-circle me-2"></i>Importación Exitosa</h6>';
+        resultsHtml += `<p>${response.message}</p>`;
+
+        if (response.stats) {
+            resultsHtml += '<ul class="mb-0">';
+            resultsHtml += `<li>Roles creados: ${response.stats.rolesCreated}</li>`;
+            resultsHtml += `<li>Usuarios creados: ${response.stats.usersCreated}</li>`;
+            resultsHtml += `<li>Usuarios actualizados: ${response.stats.usersUpdated}</li>`;
+            resultsHtml += `<li>Clases creadas: ${response.stats.classesCreated}</li>`;
+            resultsHtml += `<li>Clases actualizadas: ${response.stats.classesUpdated}</li>`;
+            resultsHtml += `<li>Total procesados: ${response.stats.totalProcessed}</li>`;
+            resultsHtml += '</ul>';
+        }
+        resultsHtml += '</div>';
+    } else {
+        resultsHtml += '<div class="alert alert-danger">';
+        resultsHtml += '<h6><i class="fas fa-exclamation-triangle me-2"></i>Error en la Importación</h6>';
+        resultsHtml += `<p>${response.message}</p>`;
+        resultsHtml += '</div>';
+    }
+
+    if (response.errors && response.errors.length > 0) {
+        resultsHtml += '<div class="alert alert-warning">';
+        resultsHtml += '<h6><i class="fas fa-exclamation-circle me-2"></i>Errores/Advertencias</h6>';
+        resultsHtml += '<ul class="mb-0">';
+        response.errors.forEach(error => {
+            resultsHtml += `<li>${error}</li>`;
+        });
+        resultsHtml += '</ul>';
+        resultsHtml += '</div>';
+    }
+
+    resultsHtml += '</div>';
+
+    resultsContainer.innerHTML = resultsHtml;
+    resultsContainer.classList.remove('d-none');
+
+    // Re-habilitar botón
+    document.getElementById('importBtn').disabled = false;
 }
 
 // Esta función se llama desde index-componentized.html después de cargar todos los scripts

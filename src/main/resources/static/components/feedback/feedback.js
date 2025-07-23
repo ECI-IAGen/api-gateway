@@ -45,6 +45,9 @@ class FeedbackComponent {
                 <td class="feedback-content text-truncate" title="${feedback.content}">
                     ${feedback.content}
                 </td>
+                <td class="feedback-sections">
+                    ${this.getFeedbackSectionsBadges(feedback)}
+                </td>
                 <td class="date-display">${feedbackDateStr}</td>
                 <td class="action-buttons">
                     <button class="btn btn-sm btn-outline-info" onclick="feedbackComponent.view(${feedback.id})" title="Ver detalles">
@@ -66,8 +69,14 @@ class FeedbackComponent {
         if (!feedback.evaluation) return 'Sin evaluación';
         
         const evaluation = feedback.evaluation;
-        const submission = evaluation.submission;
         
+        // Usar primero assignmentTitle y teamName directos del DTO si están disponibles
+        if (evaluation.assignmentTitle && evaluation.teamName) {
+            return `${evaluation.assignmentTitle} - ${evaluation.teamName} (Eval #${evaluation.id})`;
+        }
+        
+        // Fallback al objeto submission
+        const submission = evaluation.submission;
         if (!submission) return `Evaluación #${evaluation.id}`;
         
         const assignment = submission.assignment;
@@ -77,6 +86,25 @@ class FeedbackComponent {
         const teamName = team ? team.name : 'Sin equipo';
         
         return `${assignmentTitle} - ${teamName} (Eval #${evaluation.id})`;
+    }
+
+    getEvaluationInfoFromEvaluation(evaluation) {
+        // Para objetos de evaluación directos (no desde feedback)
+        if (evaluation.assignmentTitle && evaluation.teamName) {
+            return `${evaluation.assignmentTitle} - ${evaluation.teamName}`;
+        }
+        
+        // Fallback al objeto submission
+        const submission = evaluation.submission;
+        if (!submission) return 'Sin información de entrega';
+        
+        const assignment = submission.assignment;
+        const team = submission.team;
+        
+        const assignmentTitle = assignment ? assignment.title : 'Sin asignación';
+        const teamName = team ? team.name : 'Sin equipo';
+        
+        return `${assignmentTitle} - ${teamName}`;
     }
 
     getFeedbackTypeLabel(type) {
@@ -101,6 +129,24 @@ class FeedbackComponent {
         return classes[type] || 'bg-secondary';
     }
 
+    getFeedbackSectionsBadges(feedback) {
+        const badges = [];
+        
+        if (feedback.strengths && feedback.strengths.trim() !== '') {
+            badges.push('<span class="badge bg-success me-1" title="Tiene fortalezas identificadas"><i class="fas fa-thumbs-up"></i></span>');
+        }
+        
+        if (feedback.improvements && feedback.improvements.trim() !== '') {
+            badges.push('<span class="badge bg-warning me-1" title="Tiene áreas de mejora identificadas"><i class="fas fa-lightbulb"></i></span>');
+        }
+        
+        if (feedback.comments && feedback.comments.trim() !== '') {
+            badges.push('<span class="badge bg-info me-1" title="Tiene comentarios adicionales"><i class="fas fa-comment"></i></span>');
+        }
+        
+        return badges.length > 0 ? badges.join('') : '<span class="text-muted">-</span>';
+    }
+
     async showCreateModal() {
         // Obtener evaluaciones para el select
         const evaluations = app.loadedData.evaluations.length ? app.loadedData.evaluations : await apiClient.getEvaluations();
@@ -122,7 +168,7 @@ class FeedbackComponent {
                     <select class="form-select" name="evaluationId" required>
                       <option value="">Seleccione una evaluación</option>
                       ${evaluations.map(e => {
-                        const submissionInfo = this.getEvaluationInfo({evaluation: e});
+                        const submissionInfo = this.getEvaluationInfoFromEvaluation(e);
                         return `<option value="${e.id}">Eval #${e.id} - ${submissionInfo}</option>`;
                       }).join('')}
                     </select>
@@ -171,6 +217,32 @@ class FeedbackComponent {
                     <div class="form-text">Proporcione comentarios detallados y constructivos</div>
                   </div>
                   
+                  <div class="row">
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label class="form-label">Fortalezas</label>
+                        <textarea class="form-control" name="strengths" rows="4"
+                                  placeholder="Aspectos positivos y fortalezas identificadas..."></textarea>
+                        <div class="form-text">Identifique los puntos fuertes del trabajo</div>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="mb-3">
+                        <label class="form-label">Áreas de Mejora</label>
+                        <textarea class="form-control" name="improvements" rows="4"
+                                  placeholder="Sugerencias de mejora y áreas a desarrollar..."></textarea>
+                        <div class="form-text">Proporcione sugerencias constructivas para mejorar</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="mb-3">
+                    <label class="form-label">Comentarios Adicionales</label>
+                    <textarea class="form-control" name="comments" rows="3"
+                              placeholder="Comentarios adicionales u observaciones..."></textarea>
+                    <div class="form-text">Comentarios generales u observaciones adicionales</div>
+                  </div>
+                  
                   <div class="mb-3">
                     <label class="form-label">Fecha de Retroalimentación</label>
                     <input type="datetime-local" class="form-control" name="feedbackDate" required />
@@ -204,7 +276,10 @@ class FeedbackComponent {
                 evaluationId: parseInt(formData.get('evaluationId')),
                 feedbackType: formData.get('feedbackType'),
                 content: formData.get('content'),
-                feedbackDate: formData.get('feedbackDate')
+                feedbackDate: formData.get('feedbackDate'),
+                strengths: formData.get('strengths'),
+                improvements: formData.get('improvements'),
+                comments: formData.get('comments')
             };
 
             try {
@@ -250,7 +325,7 @@ class FeedbackComponent {
                       <div class="col-md-6">
                         ${feedback.evaluation ? `
                           <strong>Puntuación de la evaluación:</strong> ${feedback.evaluation.score}/5<br>
-                          <strong>Evaluador:</strong> ${feedback.evaluation.evaluator ? feedback.evaluation.evaluator.name : 'N/A'}<br>
+                          <strong>Evaluador:</strong> ${feedback.evaluation.evaluator ? feedback.evaluation.evaluator.name : (feedback.evaluation.evaluatorName || 'N/A')}<br>
                         ` : ''}
                       </div>
                     </div>
@@ -262,6 +337,42 @@ class FeedbackComponent {
                         ${feedback.content}
                       </div>
                     </div>
+                    
+                    ${feedback.strengths || feedback.improvements || feedback.comments ? `
+                    <hr>
+                    <div class="row">
+                      ${feedback.strengths ? `
+                      <div class="col-md-6">
+                        <div class="strength-section">
+                          <h6 class="text-success"><i class="fas fa-thumbs-up me-2"></i>Fortalezas</h6>
+                          <div class="p-3 border border-success rounded bg-light">
+                            ${feedback.strengths}
+                          </div>
+                        </div>
+                      </div>
+                      ` : ''}
+                      
+                      ${feedback.improvements ? `
+                      <div class="col-md-6">
+                        <div class="improvement-section">
+                          <h6 class="text-warning"><i class="fas fa-lightbulb me-2"></i>Áreas de Mejora</h6>
+                          <div class="p-3 border border-warning rounded bg-light">
+                            ${feedback.improvements}
+                          </div>
+                        </div>
+                      </div>
+                      ` : ''}
+                    </div>
+                    
+                    ${feedback.comments ? `
+                    <div class="mt-3">
+                      <h6 class="text-info"><i class="fas fa-comment me-2"></i>Comentarios Adicionales</h6>
+                      <div class="p-3 border border-info rounded bg-light">
+                        ${feedback.comments}
+                      </div>
+                    </div>
+                    ` : ''}
+                    ` : ''}
                   </div>
                   <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -300,7 +411,7 @@ class FeedbackComponent {
                         <select class="form-select" name="evaluationId" required>
                           <option value="">Seleccione una evaluación</option>
                           ${evaluations.map(e => {
-                            const submissionInfo = this.getEvaluationInfo({evaluation: e});
+                            const submissionInfo = this.getEvaluationInfoFromEvaluation(e);
                             const selected = e.id === feedback.evaluation?.id ? 'selected' : '';
                             return `<option value="${e.id}" ${selected}>Eval #${e.id} - ${submissionInfo}</option>`;
                           }).join('')}
@@ -353,6 +464,32 @@ class FeedbackComponent {
                         <textarea class="form-control" name="content" rows="5" required>${feedback.content}</textarea>
                       </div>
                       
+                      <div class="row">
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label class="form-label">Fortalezas</label>
+                            <textarea class="form-control" name="strengths" rows="4"
+                                      placeholder="Aspectos positivos y fortalezas identificadas...">${feedback.strengths || ''}</textarea>
+                            <div class="form-text">Identifique los puntos fuertes del trabajo</div>
+                          </div>
+                        </div>
+                        <div class="col-md-6">
+                          <div class="mb-3">
+                            <label class="form-label">Áreas de Mejora</label>
+                            <textarea class="form-control" name="improvements" rows="4"
+                                      placeholder="Sugerencias de mejora y áreas a desarrollar...">${feedback.improvements || ''}</textarea>
+                            <div class="form-text">Proporcione sugerencias constructivas para mejorar</div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div class="mb-3">
+                        <label class="form-label">Comentarios Adicionales</label>
+                        <textarea class="form-control" name="comments" rows="3"
+                                  placeholder="Comentarios adicionales u observaciones...">${feedback.comments || ''}</textarea>
+                        <div class="form-text">Comentarios generales u observaciones adicionales</div>
+                      </div>
+                      
                       <div class="mb-3">
                         <label class="form-label">Fecha de Retroalimentación</label>
                         <input type="datetime-local" class="form-control" name="feedbackDate" 
@@ -380,7 +517,10 @@ class FeedbackComponent {
                     evaluationId: parseInt(formData.get('evaluationId')),
                     feedbackType: formData.get('feedbackType'),
                     content: formData.get('content'),
-                    feedbackDate: formData.get('feedbackDate')
+                    feedbackDate: formData.get('feedbackDate'),
+                    strengths: formData.get('strengths'),
+                    improvements: formData.get('improvements'),
+                    comments: formData.get('comments')
                 };
 
                 try {

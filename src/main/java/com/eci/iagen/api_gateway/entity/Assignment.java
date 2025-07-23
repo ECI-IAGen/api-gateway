@@ -15,20 +15,20 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Assignment {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     @Column(nullable = false)
     private String title;
-    
-    @Column(columnDefinition = "TEXT")
+
+    @Column(columnDefinition = "text", nullable = false)
     private String description;
-    
+
     @Column(name = "start_date", nullable = false)
     private LocalDateTime startDate;
-    
+
     @Column(name = "due_date", nullable = false)
     private LocalDateTime dueDate;
     

@@ -37,7 +37,6 @@ class TeamComponent {
         tbody.innerHTML = '';
 
         this.data.forEach((team, index) => {
-            console.log(`Renderizando equipo ${index + 1}:`, team);
             // Usar userIds o userNames para contar los miembros, según el formato del backend
             const memberCount = team.userIds ? team.userIds.length : (team.users ? team.users.length : 0);
             const memberNames = team.userNames ? team.userNames.join(', ') : (team.users ? team.users.map(u => u.name).join(', ') : 'Sin miembros');

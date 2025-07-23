@@ -12,7 +12,9 @@ class RoleComponent {
 
     async loadData() {
         try {
+            console.log('RoleComponent: Cargando datos...');
             this.data = await apiClient.getRoles();
+            console.log('RoleComponent: Datos cargados:', this.data);
             this.render();
         } catch (error) {
             console.error('Error cargando roles:', error);
@@ -21,12 +23,28 @@ class RoleComponent {
     }
 
     render() {
+        
+        // Verificar si la sección de roles está visible
+        const rolesSection = document.getElementById('roles-section');
+        console.log('RoleComponent: Sección de roles visible:', rolesSection?.style.display !== 'none');
+        
         const tbody = document.getElementById('roles-table-body');
-        if (!tbody) return;
+        console.log('RoleComponent: Elemento tbody encontrado:', !!tbody);
+        
+        if (!tbody) {
+            console.error('RoleComponent: No se encontró el elemento roles-table-body');
+            return;
+        }
 
         tbody.innerHTML = '';
 
-        this.data.forEach(role => {
+        if (!this.data || this.data.length === 0) {
+            console.log('RoleComponent: No hay datos para renderizar');
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center">No hay roles disponibles</td></tr>';
+            return;
+        }
+
+        this.data.forEach((role, index) => {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${role.id}</td>
@@ -44,7 +62,12 @@ class RoleComponent {
                 </td>
             `;
             tbody.appendChild(row);
+            console.log(`RoleComponent: Fila ${index + 1} añadida al tbody`);
         });
+        
+        // Verificar el estado final del tbody
+        console.log('RoleComponent: Contenido final del tbody:', tbody.innerHTML.length, 'caracteres');
+        console.log('RoleComponent: Número de filas en tbody:', tbody.children.length);
     }
 
     async showCreateModal() {

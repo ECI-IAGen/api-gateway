@@ -31,9 +31,10 @@ public class FeedbackController {
     }
 
     @GetMapping("/evaluation/{evaluationId}")
-    public ResponseEntity<List<FeedbackDTO>> getFeedbacksByEvaluationId(@PathVariable Long evaluationId) {
-        List<FeedbackDTO> feedbacks = feedbackService.getFeedbacksByEvaluationId(evaluationId);
-        return ResponseEntity.ok(feedbacks);
+    public ResponseEntity<FeedbackDTO> getFeedbackByEvaluationId(@PathVariable Long evaluationId) {
+        return feedbackService.getFeedbackByEvaluationId(evaluationId)
+                .map(feedback -> ResponseEntity.ok(feedback))
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/submission/{submissionId}")

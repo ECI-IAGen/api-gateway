@@ -8,7 +8,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "evaluation")
@@ -16,15 +15,15 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Evaluation {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "submission_id", nullable = false)
     private Submission submission;
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "evaluator_id", nullable = false)
     private User evaluator;
@@ -34,17 +33,17 @@ public class Evaluation {
     
     @Column(precision = 5, scale = 2)
     private BigDecimal score;
-    
-    @Column(name = "criteria_json", columnDefinition = "TEXT")
+
+    @Column(name = "criteria_json", columnDefinition = "text")
     private String criteriaJson;
-    
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
     
-    // Feedback for this evaluation
-    @OneToMany(mappedBy = "evaluation", fetch = FetchType.LAZY)
+    // One feedback per evaluation
+    @OneToOne(mappedBy = "evaluation", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JsonIgnore
-    private List<Feedback> feedbacks;
+    private Feedback feedback;
     
     @PrePersist
     protected void onCreate() {

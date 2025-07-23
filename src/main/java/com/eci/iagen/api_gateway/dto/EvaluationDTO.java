@@ -15,9 +15,11 @@ public class EvaluationDTO {
     private Long submissionId;
     private Long evaluatorId;
     private String evaluatorName;
+    private String evaluationType;
     private BigDecimal score;
     private String criteriaJson;
     private LocalDateTime createdAt;
+    private LocalDateTime evaluationDate;
     private String teamName;
     private String assignmentTitle;
 }

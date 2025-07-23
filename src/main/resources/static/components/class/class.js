@@ -157,11 +157,13 @@ class ClassComponent {
     async showCreateClassModal() {
         // Cargar datos necesarios
         await this.loadUsersAndTeams();
-
+        console.log("Usuarios disponibles:", this.users);
         const professorOptions = this.users
-            .filter(user => user.roleName === 'Profesor' || user.roleName === 'profesor')
+            .filter(user => user.roleName === 'PROFESOR' || user.roleName === 'Profesor')
             .map(user => `<option value="${user.id}">${user.name}</option>`)
             .join('');
+
+        console.log("Profesores disponibles:", professorOptions);
 
         const teamCheckboxes = this.teams
             .map(team => `
@@ -252,7 +254,7 @@ class ClassComponent {
 
             console.log("Usuarios disponibles:", this.users);
             const professorOptions = this.users
-                .filter(user => user.roleName === 'Profesor' || user.roleName === 'profesor')
+                .filter(user => user.roleName === 'PROFESOR' || user.roleName === 'profesor')
                 .map(user => `
                     <option value="${user.id}" ${user.id === classItem.professorId ? 'selected' : ''}>
                         ${user.name}

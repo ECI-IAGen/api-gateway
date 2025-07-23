@@ -45,7 +45,6 @@ class UserComponent {
         }
 
         this.data.forEach((user, index) => {
-            console.log(`Renderizando usuario ${index + 1}:`, user);
             // Usar directamente los campos del UserDTO
             const roleNames = user.roleName || 'Sin rol';
             const teamNames = user.teamNames && user.teamNames.length > 0 ? user.teamNames.join(', ') : 'Sin equipos';

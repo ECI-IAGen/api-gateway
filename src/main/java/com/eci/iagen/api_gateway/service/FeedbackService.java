@@ -34,10 +34,9 @@ public class FeedbackService {
     }
 
     @Transactional(readOnly = true)
-    public List<FeedbackDTO> getFeedbacksByEvaluationId(Long evaluationId) {
-        return feedbackRepository.findByEvaluationId(evaluationId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+    public Optional<FeedbackDTO> getFeedbackByEvaluationId(Long evaluationId) {
+        return feedbackRepository.findByEvaluationId(evaluationId)
+                .map(this::convertToDTO);
     }
 
     @Transactional(readOnly = true)
@@ -89,6 +88,13 @@ public class FeedbackService {
 
         Feedback feedback = new Feedback();
         feedback.setEvaluation(evaluation);
+        
+        // Handle new fields
+        feedback.setFeedbackType(feedbackDTO.getFeedbackType());
+        feedback.setContent(feedbackDTO.getContent());
+        feedback.setFeedbackDate(feedbackDTO.getFeedbackDate());
+        
+        // Handle legacy fields for backward compatibility
         feedback.setStrengths(feedbackDTO.getStrengths());
         feedback.setImprovements(feedbackDTO.getImprovements());
         feedback.setComments(feedbackDTO.getComments());
@@ -101,6 +107,18 @@ public class FeedbackService {
     public Optional<FeedbackDTO> updateFeedback(Long id, FeedbackDTO feedbackDTO) {
         return feedbackRepository.findById(id)
                 .map(feedback -> {
+                    // Update new fields
+                    if (feedbackDTO.getFeedbackType() != null) {
+                        feedback.setFeedbackType(feedbackDTO.getFeedbackType());
+                    }
+                    if (feedbackDTO.getContent() != null) {
+                        feedback.setContent(feedbackDTO.getContent());
+                    }
+                    if (feedbackDTO.getFeedbackDate() != null) {
+                        feedback.setFeedbackDate(feedbackDTO.getFeedbackDate());
+                    }
+                    
+                    // Update legacy fields for backward compatibility
                     if (feedbackDTO.getStrengths() != null) {
                         feedback.setStrengths(feedbackDTO.getStrengths());
                     }
@@ -124,14 +142,22 @@ public class FeedbackService {
     }
 
     private FeedbackDTO convertToDTO(Feedback feedback) {
-        return new FeedbackDTO(
-                feedback.getId(),
-                feedback.getEvaluation().getId(),
-                feedback.getStrengths(),
-                feedback.getImprovements(),
-                feedback.getComments(),
-                feedback.getEvaluation().getEvaluator().getName(),
-                feedback.getEvaluation().getSubmission().getTeam().getName()
-        );
+        FeedbackDTO dto = new FeedbackDTO();
+        dto.setId(feedback.getId());
+        dto.setEvaluationId(feedback.getEvaluation().getId());
+        dto.setFeedbackType(feedback.getFeedbackType());
+        dto.setContent(feedback.getContent());
+        dto.setFeedbackDate(feedback.getFeedbackDate());
+        
+        // Legacy fields
+        dto.setStrengths(feedback.getStrengths());
+        dto.setImprovements(feedback.getImprovements());
+        dto.setComments(feedback.getComments());
+        
+        // Helper fields
+        dto.setEvaluatorName(feedback.getEvaluation().getEvaluator().getName());
+        dto.setTeamName(feedback.getEvaluation().getSubmission().getTeam().getName());
+        
+        return dto;
     }
 }
