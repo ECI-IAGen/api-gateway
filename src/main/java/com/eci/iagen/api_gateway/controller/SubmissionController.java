@@ -1,5 +1,6 @@
 package com.eci.iagen.api_gateway.controller;
 
+import com.eci.iagen.api_gateway.dto.ClassDTO;
 import com.eci.iagen.api_gateway.dto.SubmissionDTO;
 import com.eci.iagen.api_gateway.service.SubmissionService;
 import lombok.RequiredArgsConstructor;
@@ -99,5 +100,19 @@ public class SubmissionController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/class/{assignmentId}")
+    public ResponseEntity<ClassDTO> getClassByAssignmentId(@PathVariable Long assignmentId) {
+        return submissionService.getClassByAssignmentId(assignmentId)
+                .map(classDTO -> ResponseEntity.ok(classDTO))
+                .orElse(ResponseEntity.notFound().build());
+    }
+    
+    @GetMapping("/{submissionId}/class")
+    public ResponseEntity<ClassDTO> getClassBySubmissionId(@PathVariable Long submissionId) {
+        return submissionService.getClassBySubmissionId(submissionId)
+                .map(classDTO -> ResponseEntity.ok(classDTO))
+                .orElse(ResponseEntity.notFound().build());
     }
 }

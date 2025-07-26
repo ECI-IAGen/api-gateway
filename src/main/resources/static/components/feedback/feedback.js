@@ -5,14 +5,60 @@ class FeedbackComponent {
         // Los templates ya están en el HTML principal, no necesitamos cargarlos dinámicamente
     }
 
-    getTemplate() {
-        // Los templates ya están en el HTML principal
-        return '';
+    async getTemplate() {
+        try {
+            const response = await fetch('components/feedback/feedback.html');
+            const html = await response.text();
+            
+            // Si hay un archivo HTML específico, usarlo
+            if (html && html.trim()) {
+                // Extraer solo el contenido interno si existe un contenedor
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const sectionContent = doc.querySelector('#feedback-section');
+                
+                if (sectionContent) {
+                    return sectionContent.innerHTML;
+                }
+                
+                return html;
+            }
+        } catch (error) {
+            console.log('No se encontró feedback.html, usando template por defecto');
+        }
+        
+        // Fallback al template por defecto
+        return `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2><i class="fas fa-comments me-2"></i>Gestión de Retroalimentación</h2>
+                <button class="btn btn-primary" onclick="feedbackComponent.showCreateModal()">
+                    <i class="fas fa-plus me-2"></i>Crear Retroalimentación
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Evaluación</th>
+                            <th>Tipo</th>
+                            <th>Contenido</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="feedback-table-body">
+                        <!-- Los datos se cargarán aquí -->
+                    </tbody>
+                </table>
+            </div>
+        `;
     }
 
     async loadData() {
         try {
             this.data = await apiClient.getFeedbacks();
+            console.log('Feedbacks cargados:', this.data);
             this.render();
         } catch (error) {
             console.error('Error cargando feedback:', error);
@@ -27,7 +73,9 @@ class FeedbackComponent {
         tbody.innerHTML = '';
 
         this.data.forEach(feedback => {
+            console.log('Procesando feedback:', feedback);
             const feedbackDate = app.parseBackendDate(feedback.feedbackDate);
+            console.log('Fecha de retroalimentación procesada:', feedbackDate);
             const feedbackDateStr = feedbackDate ? feedbackDate.toLocaleDateString() : 'N/A';
             
             const evaluationInfo = this.getEvaluationInfo(feedback);
@@ -44,9 +92,6 @@ class FeedbackComponent {
                 </td>
                 <td class="feedback-content text-truncate" title="${feedback.content}">
                     ${feedback.content}
-                </td>
-                <td class="feedback-sections">
-                    ${this.getFeedbackSectionsBadges(feedback)}
                 </td>
                 <td class="date-display">${feedbackDateStr}</td>
                 <td class="action-buttons">
@@ -66,26 +111,9 @@ class FeedbackComponent {
     }
 
     getEvaluationInfo(feedback) {
-        if (!feedback.evaluation) return 'Sin evaluación';
-        
-        const evaluation = feedback.evaluation;
-        
-        // Usar primero assignmentTitle y teamName directos del DTO si están disponibles
-        if (evaluation.assignmentTitle && evaluation.teamName) {
-            return `${evaluation.assignmentTitle} - ${evaluation.teamName} (Eval #${evaluation.id})`;
-        }
-        
-        // Fallback al objeto submission
-        const submission = evaluation.submission;
-        if (!submission) return `Evaluación #${evaluation.id}`;
-        
-        const assignment = submission.assignment;
-        const team = submission.team;
-        
-        const assignmentTitle = assignment ? assignment.title : 'Sin asignación';
-        const teamName = team ? team.name : 'Sin equipo';
-        
-        return `${assignmentTitle} - ${teamName} (Eval #${evaluation.id})`;
+        if (!feedback.evaluationId) return 'Sin evaluación';
+
+        return `${feedback.teamName} - ${feedback.evaluatorName} (Eval #${feedback.evaluationId})`;
     }
 
     getEvaluationInfoFromEvaluation(evaluation) {

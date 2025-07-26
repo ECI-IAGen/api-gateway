@@ -3,6 +3,59 @@
     animation: fadeIn 0.3s ease-in;
 }
 
+/* Estilos para los filtros múltiples */
+.filter-card {
+    border: 1px solid #e3e6f0;
+    border-radius: 0.35rem;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+}
+
+.filter-card .card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-bottom: none;
+    color: white;
+}
+
+.filter-card .form-label {
+    font-weight: 600;
+    color: #5a5c69;
+    font-size: 0.875rem;
+}
+
+.filter-card .form-select,
+.filter-card .form-control {
+    border: 1px solid #d1d3e2;
+    border-radius: 0.35rem;
+    font-size: 0.875rem;
+    transition: all 0.15s ease-in-out;
+}
+
+.filter-card .form-select:focus,
+.filter-card .form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.filter-status-info {
+    background: #f8f9fc;
+    border-radius: 0.35rem;
+    padding: 0.75rem;
+    border-left: 4px solid #667eea;
+}
+
+#filterResultsCount {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+#filterStatusText {
+    font-size: 0.8rem;
+    max-width: 400px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 #evaluations-section .table th {
     background-color: #f1f3f4;
     font-weight: 600;

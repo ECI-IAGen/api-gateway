@@ -1,5 +1,6 @@
 package com.eci.iagen.api_gateway.service;
 
+import com.eci.iagen.api_gateway.dto.ClassDTO;
 import com.eci.iagen.api_gateway.dto.SubmissionDTO;
 import com.eci.iagen.api_gateway.entity.Assignment;
 import com.eci.iagen.api_gateway.entity.Submission;
@@ -125,8 +126,46 @@ public class SubmissionService {
         return false;
     }
 
+    @Transactional(readOnly = true)
+    public Optional<ClassDTO> getClassByAssignmentId(Long assignmentId) {
+        Assignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new IllegalArgumentException("Assignment not found with id: " + assignmentId));
+        
+        if (assignment.getClassEntity() != null) {
+            return Optional.of(convertClassToDTO(assignment.getClassEntity()));
+        }
+        
+        return Optional.empty();
+    }
+    
+    @Transactional(readOnly = true)
+    public Optional<ClassDTO> getClassBySubmissionId(Long submissionId) {
+        Optional<Submission> submission = submissionRepository.findById(submissionId);
+        
+        if (submission.isPresent() && submission.get().getAssignment() != null) {
+            Assignment assignment = submission.get().getAssignment();
+            if (assignment.getClassEntity() != null) {
+                return Optional.of(convertClassToDTO(assignment.getClassEntity()));
+            }
+        }
+        
+        return Optional.empty();
+    }
+    
+    private ClassDTO convertClassToDTO(com.eci.iagen.api_gateway.entity.Class classEntity) {
+        return new ClassDTO(
+                classEntity.getId(),
+                classEntity.getName(),
+                classEntity.getDescription(),
+                classEntity.getProfessor() != null ? classEntity.getProfessor().getId() : null,
+                classEntity.getProfessor() != null ? classEntity.getProfessor().getName() : null,
+                classEntity.getCreatedAt(),
+                classEntity.getSemester()
+        );
+    }
+
     private SubmissionDTO convertToDTO(Submission submission) {
-        return new SubmissionDTO(
+        SubmissionDTO dto = new SubmissionDTO(
                 submission.getId(),
                 submission.getAssignment().getId(),
                 submission.getAssignment().getTitle(),
@@ -135,5 +174,13 @@ public class SubmissionService {
                 submission.getSubmittedAt(),
                 submission.getFileUrl()
         );
+        
+        // Agregar información de la clase
+        if (submission.getAssignment().getClassEntity() != null) {
+            dto.setClassId(submission.getAssignment().getClassEntity().getId());
+            dto.setClassName(submission.getAssignment().getClassEntity().getName());
+        }
+        
+        return dto;
     }
 }

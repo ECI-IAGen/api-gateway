@@ -17,4 +17,18 @@ public class SubmissionDTO {
     private String teamName;
     private LocalDateTime submittedAt;
     private String fileUrl;
+    private Long classId;
+    private String className;
+    
+    // Constructor para compatibilidad con código existente
+    public SubmissionDTO(Long id, Long assignmentId, String assignmentTitle, 
+                        Long teamId, String teamName, LocalDateTime submittedAt, String fileUrl) {
+        this.id = id;
+        this.assignmentId = assignmentId;
+        this.assignmentTitle = assignmentTitle;
+        this.teamId = teamId;
+        this.teamName = teamName;
+        this.submittedAt = submittedAt;
+        this.fileUrl = fileUrl;
+    }
 }

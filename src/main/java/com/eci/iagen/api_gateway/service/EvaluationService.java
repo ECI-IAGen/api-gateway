@@ -176,7 +176,7 @@ public class EvaluationService {
     }
 
     private EvaluationDTO convertToDTO(Evaluation evaluation) {
-        return new EvaluationDTO(
+        EvaluationDTO dto = new EvaluationDTO(
                 evaluation.getId(),
                 evaluation.getSubmission().getId(),
                 evaluation.getEvaluator().getId(),
@@ -188,6 +188,14 @@ public class EvaluationService {
                 evaluation.getCreatedAt(), // evaluationDate mapea al mismo createdAt
                 evaluation.getSubmission().getTeam().getName(),
                 evaluation.getSubmission().getAssignment().getTitle());
+        
+        // Agregar información de la clase
+        if (evaluation.getSubmission().getAssignment().getClassEntity() != null) {
+            dto.setClassId(evaluation.getSubmission().getAssignment().getClassEntity().getId());
+            dto.setClassName(evaluation.getSubmission().getAssignment().getClassEntity().getName());
+        }
+        
+        return dto;
     }
 
     @Transactional

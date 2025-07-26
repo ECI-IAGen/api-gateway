@@ -28,7 +28,7 @@ public class Class {
     @Column(nullable = false)
     private String name; // Ej: "Programación Avanzada 2025-1"
     
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "text")
     private String description;
     
     @ManyToOne(fetch = FetchType.LAZY)

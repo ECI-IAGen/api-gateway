@@ -6,6 +6,7 @@ class App {
             users: [],
             roles: [],
             teams: [],
+            classes: [],
             assignments: [],
             submissions: [],
             evaluations: [],
@@ -256,6 +257,7 @@ class App {
                 users: [],
                 roles: [],
                 teams: [],
+                classes: [],
                 assignments: [],
                 submissions: [],
                 evaluations: [],
@@ -332,12 +334,25 @@ class App {
     }
 
     async loadComponentTemplate(section) {
-        const sectionElement = document.getElementById(`${section}-section`);
+        const sectionElement = document.getElementById(`${section}s-section`); // Nota: agregamos 's' para el plural
+        const component = this.components[section];
 
-        // Las secciones ya están en el HTML, no necesitamos cargar templates dinámicamente
-        // Este método se mantiene para compatibilidad futura
         if (!sectionElement) {
-            console.warn(`Sección ${section} no encontrada en el DOM`);
+            console.warn(`Sección ${section}s-section no encontrada en el DOM`);
+            return;
+        }
+
+        // Si el componente tiene un método getTemplate, usar su HTML
+        if (component && typeof component.getTemplate === 'function') {
+            try {
+                const template = await component.getTemplate(); // Ahora es asíncrono
+                if (template && template.trim()) {
+                    console.log(`Usando template dinámico para ${section}`);
+                    sectionElement.innerHTML = template;
+                }
+            } catch (error) {
+                console.error(`Error cargando template para ${section}:`, error);
+            }
         }
     }
 
