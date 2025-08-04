@@ -1,13 +1,25 @@
 package com.eci.iagen.api_gateway.controller;
 
-import com.eci.iagen.api_gateway.dto.FeedbackDTO;
-import com.eci.iagen.api_gateway.service.FeedbackService;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import com.eci.iagen.api_gateway.dto.FeedbackDTO;
+import com.eci.iagen.api_gateway.dto.request.GeneralFeedbackRequest;
+import com.eci.iagen.api_gateway.dto.response.GeneralFeedbackResponse;
+import com.eci.iagen.api_gateway.service.FeedbackService;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/feedbacks")
@@ -28,48 +40,6 @@ public class FeedbackController {
         return feedbackService.getFeedbackById(id)
                 .map(feedback -> ResponseEntity.ok(feedback))
                 .orElse(ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/evaluation/{evaluationId}")
-    public ResponseEntity<List<FeedbackDTO>> getFeedbacksByEvaluationId(@PathVariable Long evaluationId) {
-        List<FeedbackDTO> feedbacks = feedbackService.getFeedbacksByEvaluationId(evaluationId);
-        return ResponseEntity.ok(feedbacks);
-    }
-
-    @GetMapping("/submission/{submissionId}")
-    public ResponseEntity<List<FeedbackDTO>> getFeedbacksBySubmissionId(@PathVariable Long submissionId) {
-        List<FeedbackDTO> feedbacks = feedbackService.getFeedbacksBySubmissionId(submissionId);
-        return ResponseEntity.ok(feedbacks);
-    }
-
-    @GetMapping("/evaluator/{evaluatorId}")
-    public ResponseEntity<List<FeedbackDTO>> getFeedbacksByEvaluatorId(@PathVariable Long evaluatorId) {
-        List<FeedbackDTO> feedbacks = feedbackService.getFeedbacksByEvaluatorId(evaluatorId);
-        return ResponseEntity.ok(feedbacks);
-    }
-
-    @GetMapping("/team/{teamId}")
-    public ResponseEntity<List<FeedbackDTO>> getFeedbacksByTeamId(@PathVariable Long teamId) {
-        List<FeedbackDTO> feedbacks = feedbackService.getFeedbacksByTeamId(teamId);
-        return ResponseEntity.ok(feedbacks);
-    }
-
-    @GetMapping("/assignment/{assignmentId}")
-    public ResponseEntity<List<FeedbackDTO>> getFeedbacksByAssignmentId(@PathVariable Long assignmentId) {
-        List<FeedbackDTO> feedbacks = feedbackService.getFeedbacksByAssignmentId(assignmentId);
-        return ResponseEntity.ok(feedbacks);
-    }
-
-    @GetMapping("/with-strengths")
-    public ResponseEntity<List<FeedbackDTO>> getFeedbacksWithStrengths() {
-        List<FeedbackDTO> feedbacks = feedbackService.getFeedbacksWithStrengths();
-        return ResponseEntity.ok(feedbacks);
-    }
-
-    @GetMapping("/with-improvements")
-    public ResponseEntity<List<FeedbackDTO>> getFeedbacksWithImprovements() {
-        List<FeedbackDTO> feedbacks = feedbackService.getFeedbacksWithImprovements();
-        return ResponseEntity.ok(feedbacks);
     }
 
     @PostMapping
@@ -99,5 +69,49 @@ public class FeedbackController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @PostMapping("/auto/equipo/{submissionId}")
+    public ResponseEntity<FeedbackDTO> generateTeamFeedback(@PathVariable Long submissionId) {
+        try {
+            FeedbackDTO feedback = feedbackService.generateTeamFeedback(submissionId);
+            return ResponseEntity.status(HttpStatus.CREATED).body(feedback);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PostMapping("/auto/coordinador")
+    public ResponseEntity<GeneralFeedbackResponse> generateCoordinatorFeedback(@RequestBody GeneralFeedbackRequest request) {
+        try {
+            if (request.getMessage() == null || request.getMessage().trim().isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            GeneralFeedbackResponse response = feedbackService.generateCoordinatorFeedback(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PostMapping("/auto/profesor")
+    public ResponseEntity<GeneralFeedbackResponse> generateTeacherFeedback(@RequestBody GeneralFeedbackRequest request) {
+        try {
+            if (request.getMessage() == null || request.getMessage().trim().isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            GeneralFeedbackResponse response = feedbackService.generateTeacherFeedback(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }

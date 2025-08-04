@@ -1,23 +1,28 @@
 package com.eci.iagen.api_gateway.service;
 
-import com.eci.iagen.api_gateway.dto.AssignmentDTO;
-import com.eci.iagen.api_gateway.entity.Assignment;
-import com.eci.iagen.api_gateway.repository.AssignmentRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.eci.iagen.api_gateway.dto.AssignmentDTO;
+import com.eci.iagen.api_gateway.entity.Assignment;
+import com.eci.iagen.api_gateway.entity.Class;
+import com.eci.iagen.api_gateway.repository.AssignmentRepository;
+import com.eci.iagen.api_gateway.repository.ClassRepository;
+
+import lombok.RequiredArgsConstructor;
+
 @Service
 @RequiredArgsConstructor
 public class AssignmentService {
 
     private final AssignmentRepository assignmentRepository;
+    private final ClassRepository classRepository;
 
     // ================== CRUD BÁSICO ==================
     
@@ -51,6 +56,13 @@ public class AssignmentService {
         assignment.setDescription(assignmentDTO.getDescription() != null ? assignmentDTO.getDescription().trim() : null);
         assignment.setStartDate(assignmentDTO.getStartDate());
         assignment.setDueDate(assignmentDTO.getDueDate());
+        
+        // Asignar la clase si se proporciona
+        if (assignmentDTO.getClassId() != null) {
+            Class classEntity = classRepository.findById(assignmentDTO.getClassId())
+                    .orElseThrow(() -> new IllegalArgumentException("Class not found with id: " + assignmentDTO.getClassId()));
+            assignment.setClassEntity(classEntity);
+        }
 
         Assignment savedAssignment = assignmentRepository.save(assignment);
         return convertToDTO(savedAssignment);
@@ -76,6 +88,15 @@ public class AssignmentService {
                     assignment.setDescription(assignmentDTO.getDescription() != null ? assignmentDTO.getDescription().trim() : null);
                     assignment.setStartDate(assignmentDTO.getStartDate());
                     assignment.setDueDate(assignmentDTO.getDueDate());
+                    
+                    // Actualizar la clase si se proporciona
+                    if (assignmentDTO.getClassId() != null) {
+                        Class classEntity = classRepository.findById(assignmentDTO.getClassId())
+                                .orElseThrow(() -> new IllegalArgumentException("Class not found with id: " + assignmentDTO.getClassId()));
+                        assignment.setClassEntity(classEntity);
+                    } else {
+                        assignment.setClassEntity(null);
+                    }
 
                     return convertToDTO(assignmentRepository.save(assignment));
                 });
@@ -92,115 +113,6 @@ public class AssignmentService {
             return true;
         }
         return false;
-    }
-
-    // ================== BÚSQUEDAS AVANZADAS ==================
-    
-    @Transactional(readOnly = true)
-    public List<AssignmentDTO> getAssignmentsByTitleContaining(String title) {
-        if (title == null || title.trim().isEmpty()) {
-            throw new IllegalArgumentException("Search title cannot be null or empty");
-        }
-        return assignmentRepository.findByTitleContaining(title.trim()).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<AssignmentDTO> searchAssignments(String searchTerm) {
-        if (searchTerm == null || searchTerm.trim().isEmpty()) {
-            throw new IllegalArgumentException("Search term cannot be null or empty");
-        }
-        String trimmedTerm = searchTerm.trim();
-        return assignmentRepository.findByTitleOrDescriptionContaining(trimmedTerm, trimmedTerm).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<AssignmentDTO> getUpcomingAssignments() {
-        return assignmentRepository.findUpcomingAssignments(LocalDateTime.now()).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<AssignmentDTO> getPastAssignments() {
-        return assignmentRepository.findPastAssignments(LocalDateTime.now()).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<AssignmentDTO> getActiveAssignments() {
-        return assignmentRepository.findActiveAssignments(LocalDateTime.now()).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<AssignmentDTO> getAssignmentsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
-        if (startDate == null || endDate == null) {
-            throw new IllegalArgumentException("Start date and end date cannot be null");
-        }
-        if (startDate.isAfter(endDate)) {
-            throw new IllegalArgumentException("Start date must be before or equal to end date");
-        }
-        return assignmentRepository.findAssignmentsByDateRange(startDate, endDate).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<AssignmentDTO> getAssignmentsDueWithinDays(int days) {
-        if (days < 0) {
-            throw new IllegalArgumentException("Days must be non-negative");
-        }
-        LocalDateTime currentDate = LocalDateTime.now();
-        LocalDateTime futureDate = currentDate.plusDays(days);
-        return assignmentRepository.findAssignmentsDueWithin(currentDate, futureDate).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<AssignmentDTO> getAssignmentsDueWithinHours(int hours) {
-        if (hours < 0) {
-            throw new IllegalArgumentException("Hours must be non-negative");
-        }
-        LocalDateTime currentDate = LocalDateTime.now();
-        LocalDateTime futureDate = currentDate.plusHours(hours);
-        return assignmentRepository.findAssignmentsDueWithin(currentDate, futureDate).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    // ================== ESTADÍSTICAS ==================
-    
-    @Transactional(readOnly = true)
-    public Long countUpcomingAssignments() {
-        return assignmentRepository.countUpcomingAssignments(LocalDateTime.now());
-    }
-
-    @Transactional(readOnly = true)
-    public Long countPastAssignments() {
-        return assignmentRepository.countPastAssignments(LocalDateTime.now());
-    }
-
-    @Transactional(readOnly = true)
-    public Long countActiveAssignments() {
-        return assignmentRepository.countActiveAssignments(LocalDateTime.now());
-    }
-
-    // ================== OPERACIONES DE LIMPIEZA ==================
-    
-    @Transactional
-    public int deleteOldAssignments(int daysOld) {
-        if (daysOld <= 0) {
-            throw new IllegalArgumentException("Days old must be positive");
-        }
-        LocalDateTime cutoffDate = LocalDateTime.now().minusDays(daysOld);
-        return assignmentRepository.deleteOldAssignments(cutoffDate);
     }
 
     // ================== MÉTODOS PRIVADOS DE VALIDACIÓN ==================
@@ -253,12 +165,20 @@ public class AssignmentService {
             return null;
         }
         
-        return new AssignmentDTO(
+        AssignmentDTO dto = new AssignmentDTO(
                 assignment.getId(),
                 assignment.getTitle(),
                 assignment.getDescription(),
                 assignment.getStartDate(),
                 assignment.getDueDate()
         );
+        
+        // Añadir información de la clase si está disponible
+        if (assignment.getClassEntity() != null) {
+            dto.setClassId(assignment.getClassEntity().getId());
+            dto.setClassName(assignment.getClassEntity().getName());
+        }
+        
+        return dto;
     }
 }

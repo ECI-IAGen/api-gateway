@@ -1,30 +1,5 @@
 package com.eci.iagen.api_gateway.service;
 
-import com.eci.iagen.api_gateway.client.ScheduleComplianceClient;
-import com.eci.iagen.api_gateway.dto.EvaluationDTO;
-import com.eci.iagen.api_gateway.dto.ScheduleComplianceRequest;
-import com.eci.iagen.api_gateway.dto.ScheduleComplianceResponse;
-import com.eci.iagen.api_gateway.entity.Evaluation;
-import com.eci.iagen.api_gateway.entity.Submission;
-import com.eci.iagen.api_gateway.entity.User;
-import com.eci.iagen.api_gateway.repository.EvaluationRepository;
-import com.eci.iagen.api_gateway.repository.SubmissionRepository;
-import com.eci.iagen.api_gateway.repository.UserRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-
-import org.springframework.http.MediaType;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -38,6 +13,35 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
+
+import com.eci.iagen.api_gateway.client.CodeAnalysisClient;
+import com.eci.iagen.api_gateway.client.ScheduleComplianceClient;
+import com.eci.iagen.api_gateway.controller.EvaluationController;
+import com.eci.iagen.api_gateway.dto.EvaluationDTO;
+import com.eci.iagen.api_gateway.dto.SubmissionDTO;
+import com.eci.iagen.api_gateway.dto.request.ScheduleComplianceRequest;
+import com.eci.iagen.api_gateway.dto.response.ScheduleComplianceResponse;
+import com.eci.iagen.api_gateway.entity.Evaluation;
+import com.eci.iagen.api_gateway.entity.Submission;
+import com.eci.iagen.api_gateway.entity.User;
+import com.eci.iagen.api_gateway.repository.EvaluationRepository;
+import com.eci.iagen.api_gateway.repository.SubmissionRepository;
+import com.eci.iagen.api_gateway.repository.UserRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -48,6 +52,9 @@ public class EvaluationService {
     private final UserRepository userRepository;
     private final RestTemplate restTemplate;
     private final ScheduleComplianceClient scheduleComplianceClient;
+    private final CodeAnalysisClient codeAnalysisClient;
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(EvaluationController.class);
+
 
     private static final DateTimeFormatter GITHUB_DATE_FORMATTER = DateTimeFormatter
             .ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'").withZone(ZoneId.of("UTC"));
@@ -65,52 +72,6 @@ public class EvaluationService {
                 .map(this::convertToDTO);
     }
 
-    @Transactional(readOnly = true)
-    public List<EvaluationDTO> getEvaluationsBySubmissionId(Long submissionId) {
-        return evaluationRepository.findBySubmissionId(submissionId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<EvaluationDTO> getEvaluationsByEvaluatorId(Long evaluatorId) {
-        return evaluationRepository.findByEvaluatorId(evaluatorId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<EvaluationDTO> getEvaluationBySubmissionAndEvaluator(Long submissionId, Long evaluatorId) {
-        return evaluationRepository.findBySubmissionIdAndEvaluatorId(submissionId, evaluatorId)
-                .map(this::convertToDTO);
-    }
-
-    @Transactional(readOnly = true)
-    public List<EvaluationDTO> getEvaluationsByScoreRange(BigDecimal minScore, BigDecimal maxScore) {
-        return evaluationRepository.findByScoreBetween(minScore, maxScore).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<EvaluationDTO> getEvaluationsBetweenDates(LocalDateTime startDate, LocalDateTime endDate) {
-        return evaluationRepository.findEvaluationsBetweenDates(startDate, endDate).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<EvaluationDTO> getEvaluationsByTeamId(Long teamId) {
-        return evaluationRepository.findByTeamIdOrderByCreatedAtDesc(teamId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public BigDecimal getAverageScoreByAssignmentId(Long assignmentId) {
-        return evaluationRepository.findAverageScoreByAssignmentId(assignmentId);
-    }
-
     @Transactional
     public EvaluationDTO createEvaluation(EvaluationDTO evaluationDTO) {
         Submission submission = submissionRepository.findById(evaluationDTO.getSubmissionId())
@@ -120,14 +81,6 @@ public class EvaluationService {
         User evaluator = userRepository.findById(evaluationDTO.getEvaluatorId())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Evaluator not found with id: " + evaluationDTO.getEvaluatorId()));
-
-        // Verificar si ya existe una evaluación de este evaluador para esta entrega
-        Optional<Evaluation> existingEvaluation = evaluationRepository.findBySubmissionIdAndEvaluatorId(
-                evaluationDTO.getSubmissionId(), evaluationDTO.getEvaluatorId());
-
-        if (existingEvaluation.isPresent()) {
-            throw new IllegalArgumentException("Evaluation already exists for this submission and evaluator");
-        }
 
         // Validar rango de puntuación
         if (evaluationDTO.getScore() != null &&
@@ -139,9 +92,11 @@ public class EvaluationService {
         Evaluation evaluation = new Evaluation();
         evaluation.setSubmission(submission);
         evaluation.setEvaluator(evaluator);
+        evaluation.setEvaluationType(evaluationDTO.getEvaluationType() != null ? evaluationDTO.getEvaluationType() : "MANUAL");
         evaluation.setScore(evaluationDTO.getScore());
         evaluation.setCriteriaJson(evaluationDTO.getCriteriaJson());
         evaluation.setCreatedAt(
+                evaluationDTO.getEvaluationDate() != null ? evaluationDTO.getEvaluationDate() : 
                 evaluationDTO.getCreatedAt() != null ? evaluationDTO.getCreatedAt() : LocalDateTime.now());
 
         Evaluation savedEvaluation = evaluationRepository.save(evaluation);
@@ -159,6 +114,9 @@ public class EvaluationService {
                         }
                         evaluation.setScore(evaluationDTO.getScore());
                     }
+                    if (evaluationDTO.getEvaluationType() != null) {
+                        evaluation.setEvaluationType(evaluationDTO.getEvaluationType());
+                    }
                     if (evaluationDTO.getCriteriaJson() != null) {
                         evaluation.setCriteriaJson(evaluationDTO.getCriteriaJson());
                     }
@@ -175,31 +133,15 @@ public class EvaluationService {
         return false;
     }
 
-    private EvaluationDTO convertToDTO(Evaluation evaluation) {
-        return new EvaluationDTO(
-                evaluation.getId(),
-                evaluation.getSubmission().getId(),
-                evaluation.getEvaluator().getId(),
-                evaluation.getEvaluator().getName(),
-                evaluation.getScore(),
-                evaluation.getCriteriaJson(),
-                evaluation.getCreatedAt(),
-                evaluation.getSubmission().getTeam().getName(),
-                evaluation.getSubmission().getAssignment().getTitle());
-    }
-
     @Transactional
     public EvaluationDTO evaluateGitHubCommits(Long submissionId, Long evaluatorId) {
+        logger.info("Evaluating GitHub commits for submission {} by evaluator {}", submissionId, evaluatorId);
+
         Submission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new IllegalArgumentException("Submission not found with id: " + submissionId));
 
         User evaluator = userRepository.findById(evaluatorId)
                 .orElseThrow(() -> new IllegalArgumentException("Evaluator not found with id: " + evaluatorId));
-
-        // Verificar si ya existe evaluación para esta entrega y evaluador
-        if (evaluationRepository.existsBySubmissionIdAndEvaluatorId(submissionId, evaluatorId)) {
-            throw new IllegalArgumentException("Evaluation already exists for this submission and evaluator");
-        }
 
         // Obtener commits de GitHub
         List<CommitInfo> commits = fetchGitHubCommits(submission.getFileUrl());
@@ -210,23 +152,22 @@ public class EvaluationService {
         log.info("Due Date: {}", submission.getAssignment().getDueDate());
         log.info("Submission Date: {}", submission.getSubmittedAt());
         log.info("Total commits found: {}", commits.size());
-        
+
         if (!commits.isEmpty()) {
             // Ordenar commits por fecha para encontrar el último
             commits.sort(Comparator.comparing(CommitInfo::getDate).reversed());
             CommitInfo lastCommit = commits.get(0);
             log.info("Last commit date: {}", lastCommit.getDate());
             log.info("Last commit message: {}", lastCommit.getMessage());
-            
+
             // Calcular días tardíos manualmente para verificar
             LocalDateTime dueDate = submission.getAssignment().getDueDate();
             LocalDateTime lastCommitDate = lastCommit.getDate();
-            
+
             if (lastCommitDate.isAfter(dueDate)) {
                 long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(
-                    dueDate.toLocalDate(), 
-                    lastCommitDate.toLocalDate()
-                );
+                        dueDate.toLocalDate(),
+                        lastCommitDate.toLocalDate());
                 log.info("Manual calculation - Days late: {}", daysBetween);
                 log.info("Expected score: {}", 5.0 - (daysBetween * 0.5));
             } else {
@@ -241,7 +182,7 @@ public class EvaluationService {
                 submission.getSubmittedAt(),
                 submission.getFileUrl() // Asumiendo que fileUrl contiene la URL del repositorio
         );
-        
+
         // Debug: Log de respuesta del microservicio
         log.info("Schedule Compliance Response:");
         log.info("  - Penalized Score: {}", complianceResponse.getPenalizedScore());
@@ -254,6 +195,7 @@ public class EvaluationService {
         Evaluation evaluation = new Evaluation();
         evaluation.setSubmission(submission);
         evaluation.setEvaluator(evaluator);
+        evaluation.setEvaluationType("AUTOMATIC");
         evaluation.setScore(complianceResponse.getPenalizedScore());
         evaluation.setCriteriaJson(complianceResponse.getEvaluationCriteria());
         evaluation.setCreatedAt(LocalDateTime.now());
@@ -262,10 +204,79 @@ public class EvaluationService {
         return convertToDTO(savedEvaluation);
     }
 
+    @Transactional
+    public EvaluationDTO evaluateGoodPractices(Long submissionId, Long evaluatorId, boolean usingIA) {
+        logger.info("Evaluating good practices for submission {} by evaluator {} using {}",
+                   submissionId, evaluatorId, usingIA ? "LLM Analysis" : "Checkstyle Analysis");
+
+        Submission submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new IllegalArgumentException("Submission not found with id: " + submissionId));
+
+        User evaluator = userRepository.findById(evaluatorId)
+                .orElseThrow(() -> new IllegalArgumentException("Evaluator not found with id: " + evaluatorId));
+
+        try {
+            // Convertir la submission a DTO para enviar al servicio externo
+            SubmissionDTO submissionDTO = SubmissionService.convertToDTO(submission);
+
+            // Llamar al servicio apropiado según el parámetro usingIA
+            EvaluationDTO externalEvaluation;
+            if (usingIA) {
+                log.info("Calling LLM analysis service for submission {}", submissionId);
+                externalEvaluation = codeAnalysisClient.performLLMAnalysis(submissionDTO);
+            } else {
+                log.info("Calling Checkstyle analysis service for submission {}", submissionId);
+                externalEvaluation = codeAnalysisClient.performCheckstyleAnalysis(submissionDTO);
+            }
+            
+            // Crear y guardar la evaluación basada en la respuesta del servicio externo
+            Evaluation evaluation = new Evaluation();
+            evaluation.setSubmission(submission);
+            evaluation.setEvaluator(evaluator);
+            evaluation.setEvaluationType(usingIA ? "GOOD_PRACTICES_LLM" : "GOOD_PRACTICES_CHECKSTYLE");
+            evaluation.setScore(externalEvaluation.getScore());
+            evaluation.setCriteriaJson(externalEvaluation.getCriteriaJson());
+            evaluation.setCreatedAt(LocalDateTime.now());
+
+            Evaluation savedEvaluation = evaluationRepository.save(evaluation);
+            return convertToDTO(savedEvaluation);
+            
+        } catch (Exception e) {
+            log.error("Error calling external code analysis service for submission {}: {}", 
+                     submissionId, e.getMessage(), e);
+            
+            // Fallback: crear una evaluación de error
+            Evaluation evaluation = new Evaluation();
+            evaluation.setSubmission(submission);
+            evaluation.setEvaluator(evaluator);
+            evaluation.setEvaluationType(usingIA ? "GOOD_PRACTICES_LLM_ERROR" : "GOOD_PRACTICES_CHECKSTYLE_ERROR");
+            evaluation.setScore(BigDecimal.valueOf(0.0));
+            
+            // Criteria JSON con información del error
+            Map<String, Object> criteria = new LinkedHashMap<>();
+            criteria.put("evaluationMethod", usingIA ? "LLM Analysis (Failed)" : "Checkstyle Analysis (Failed)");
+            criteria.put("status", "ERROR");
+            criteria.put("error", e.getMessage());
+            criteria.put("evaluationDate", LocalDateTime.now().toString());
+            
+            try {
+                String criteriaJson = new ObjectMapper().writeValueAsString(criteria);
+                evaluation.setCriteriaJson(criteriaJson);
+            } catch (JsonProcessingException jsonE) {
+                evaluation.setCriteriaJson("{\"error\":\"Could not generate criteria JSON\"}");
+            }
+            
+            evaluation.setCreatedAt(LocalDateTime.now());
+
+            Evaluation savedEvaluation = evaluationRepository.save(evaluation);
+            return convertToDTO(savedEvaluation);
+        }
+    }
+
     private List<CommitInfo> fetchGitHubCommits(String repoUrl) {
         log.info("=== FETCHING GITHUB COMMITS ===");
         log.info("Original repo URL: {}", repoUrl);
-        
+
         String apiUrl = convertToGitHubApiUrl(repoUrl);
         log.info("Converted API URL: {}", apiUrl);
 
@@ -283,7 +294,7 @@ public class EvaluationService {
                     Object[].class);
 
             return processGitHubResponse(response.getBody());
-        } catch (Exception e) {
+        } catch (RestClientException e) {
             log.error("Error fetching commits from GitHub URL: {}", apiUrl, e);
             throw new RuntimeException("Error fetching commits from GitHub: " + e.getMessage(), e);
         }
@@ -291,21 +302,22 @@ public class EvaluationService {
 
     private String convertToGitHubApiUrl(String repoUrl) {
         log.info("Converting repo URL: {}", repoUrl);
-        
+
         String apiBase = "https://api.github.com/repos/";
         String repoPath = repoUrl.replace("https://github.com/", "").replace(".git", "");
-        
+
         log.info("Extracted repo path: '{}'", repoPath);
-        
+
         // Validar que la URL tiene el formato correcto usuario/repositorio
         if (!repoPath.contains("/") || repoPath.split("/").length < 2) {
             log.error("Invalid GitHub repository URL format. Expected: https://github.com/user/repo, got: {}", repoUrl);
-            throw new RuntimeException("Invalid GitHub repository URL format. Expected: https://github.com/user/repo, got: " + repoUrl);
+            throw new RuntimeException(
+                    "Invalid GitHub repository URL format. Expected: https://github.com/user/repo, got: " + repoUrl);
         }
-        
+
         String finalUrl = apiBase + repoPath + "/commits";
         log.info("Final GitHub API URL: {}", finalUrl);
-        
+
         return finalUrl;
     }
 
@@ -379,7 +391,7 @@ public class EvaluationService {
             log.info("Due Date: {}", dueDate);
             log.info("Submission Date: {}", submissionDate);
             log.info("Number of commits: {}", commits.size());
-            
+
             // Convertir commits internos a DTOs para el microservicio
             List<ScheduleComplianceRequest.CommitInfo> commitDTOs = commits.stream()
                     .map(commit -> new ScheduleComplianceRequest.CommitInfo(
@@ -392,9 +404,9 @@ public class EvaluationService {
             if (!commitDTOs.isEmpty()) {
                 // Ordenar para mostrar el último
                 List<ScheduleComplianceRequest.CommitInfo> sortedCommits = commitDTOs.stream()
-                    .sorted(Comparator.comparing(ScheduleComplianceRequest.CommitInfo::getDate).reversed())
-                    .collect(Collectors.toList());
-                
+                        .sorted(Comparator.comparing(ScheduleComplianceRequest.CommitInfo::getDate).reversed())
+                        .collect(Collectors.toList());
+
                 ScheduleComplianceRequest.CommitInfo lastCommit = sortedCommits.get(0);
                 log.info("Last commit being sent: {} - {}", lastCommit.getDate(), lastCommit.getMessage());
             }
@@ -427,7 +439,7 @@ public class EvaluationService {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> parsedMap = new ObjectMapper().readValue(legacyResult.getCriteriaJson(), Map.class);
                 criteriaMap = parsedMap;
-            } catch (Exception jsonE) {
+            } catch (JsonProcessingException jsonE) {
                 log.warn("Could not parse legacy criteria JSON", jsonE);
             }
 
@@ -449,7 +461,8 @@ public class EvaluationService {
 
     /**
      * Método legacy para calcular puntuación basada en commits (fallback)
-     * Ahora usa la misma lógica que Schedule Compliance: penalización por días tardíos
+     * Ahora usa la misma lógica que Schedule Compliance: penalización por días
+     * tardíos
      */
     private EvaluationResult calculateScoreBasedOnCommits(List<CommitInfo> commits, LocalDateTime dueDate) {
         double initialScore = 5.0;
@@ -459,35 +472,33 @@ public class EvaluationService {
         // Ordenar commits por fecha (más reciente primero)
         commits.sort(Comparator.comparing(CommitInfo::getDate).reversed());
 
-        // Determinar fecha efectiva (último commit si existe)
-        LocalDateTime effectiveDate = dueDate; // Por defecto, si no hay commits tardíos
+        // Calcular días tardíos si hay commits
         if (!commits.isEmpty()) {
             CommitInfo lastCommit = commits.get(0);
-            effectiveDate = lastCommit.getDate();
-            
+            LocalDateTime lastCommitDate = lastCommit.getDate();
+
             // Calcular días tardíos usando la misma lógica que Schedule Compliance
-            if (effectiveDate.isAfter(dueDate)) {
+            if (lastCommitDate.isAfter(dueDate)) {
                 long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(
-                    dueDate.toLocalDate(), 
-                    effectiveDate.toLocalDate()
-                );
-                
+                        dueDate.toLocalDate(),
+                        lastCommitDate.toLocalDate());
+
                 // Si es el mismo día pero después de la hora, cuenta como 1 día tardío
-                if (daysBetween == 0 && effectiveDate.isAfter(dueDate)) {
+                if (daysBetween == 0 && lastCommitDate.isAfter(dueDate)) {
                     lateDays = 1;
                 } else {
                     lateDays = Math.max(0, (int) daysBetween);
                 }
             }
-            
-            log.info("Legacy method - Last commit: {}, Due: {}, Days late: {}", 
-                effectiveDate, dueDate, lateDays);
+
+            log.info("Legacy method - Last commit: {}, Due: {}, Days late: {}",
+                    lastCommitDate, dueDate, lateDays);
         }
 
         // Aplicar penalización por días tardíos (igual que Schedule Compliance)
         double penalty = lateDays * 0.5;
         double finalScore = Math.max(0.0, initialScore - penalty);
-        
+
         log.info("Legacy method - Penalty: {}, Final score: {}", penalty, finalScore);
 
         // Generar detalles de commits para el JSON
@@ -509,19 +520,8 @@ public class EvaluationService {
         return new EvaluationResult(finalScoreBD, criteriaJson);
     }
 
-    private String buildCriteriaJson(List<Map<String, Object>> commitDetails, boolean hasLateCommits) {
-        try {
-            Map<String, Object> criteria = new LinkedHashMap<>();
-            criteria.put("hasLateCommits", hasLateCommits);
-            criteria.put("commits", commitDetails);
-
-            return new ObjectMapper().writeValueAsString(criteria);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Error generating criteria JSON", e);
-        }
-    }
-
-    private String buildCriteriaJsonWithDays(List<Map<String, Object>> commitDetails, boolean isLate, int lateDays, double penalty) {
+    private String buildCriteriaJsonWithDays(List<Map<String, Object>> commitDetails, boolean isLate, int lateDays,
+            double penalty) {
         try {
             Map<String, Object> criteria = new LinkedHashMap<>();
             criteria.put("evaluationMethod", "Days-based penalty system (Legacy)");
@@ -581,4 +581,28 @@ public class EvaluationService {
             return criteriaJson;
         }
     }
+
+    private EvaluationDTO convertToDTO(Evaluation evaluation) {
+        EvaluationDTO dto = new EvaluationDTO(
+                evaluation.getId(),
+                evaluation.getSubmission().getId(),
+                evaluation.getEvaluator().getId(),
+                evaluation.getEvaluator().getName(),
+                evaluation.getEvaluationType(),
+                evaluation.getScore(),
+                evaluation.getCriteriaJson(),
+                evaluation.getCreatedAt(),
+                evaluation.getCreatedAt(), // evaluationDate mapea al mismo createdAt
+                evaluation.getSubmission().getTeam().getName(),
+                evaluation.getSubmission().getAssignment().getTitle());
+        
+        // Agregar información de la clase
+        if (evaluation.getSubmission().getAssignment().getClassEntity() != null) {
+            dto.setClassId(evaluation.getSubmission().getAssignment().getClassEntity().getId());
+            dto.setClassName(evaluation.getSubmission().getAssignment().getClassEntity().getName());
+        }
+        
+        return dto;
+    }
+
 }

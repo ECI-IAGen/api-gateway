@@ -28,7 +28,25 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
+		<commons-collections4.version>4.4</commons-collections4.version>
+		<commons-codec.version>1.18.0</commons-codec.version>
 	</properties>
+	
+	<dependencyManagement>
+		<dependencies>
+			<!-- Security patches for known vulnerabilities -->
+			<dependency>
+				<groupId>org.apache.commons</groupId>
+				<artifactId>commons-collections4</artifactId>
+				<version>${commons-collections4.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>commons-codec</groupId>
+				<artifactId>commons-codec</artifactId>
+				<version>${commons-codec.version}</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -69,7 +87,25 @@
 		<dependency>
             <groupId>io.github.cdimascio</groupId>
             <artifactId>dotenv-java</artifactId>
-            <version>3.0.0</version>
+            <version>3.1.0</version>
+        </dependency>
+        
+        <!-- Apache POI for Excel file processing -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi</artifactId>
+            <version>5.3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.3.0</version>
+        </dependency>
+        
+        <!-- Explicit dependency to fix security vulnerabilities -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
         </dependency>
 	</dependencies>
 
@@ -98,6 +134,26 @@
 						</exclude>
 					</excludes>
 				</configuration>
+			</plugin>
+			
+			<!-- OWASP Dependency Check Plugin for security vulnerability scanning -->
+			<plugin>
+				<groupId>org.owasp</groupId>
+				<artifactId>dependency-check-maven</artifactId>
+				<version>10.0.4</version>
+				<configuration>
+					<suppressionFile>owasp-suppressions.xml</suppressionFile>
+					<failBuildOnCVSS>7</failBuildOnCVSS>
+					<skipProvidedScope>true</skipProvidedScope>
+					<skipRuntimeScope>false</skipRuntimeScope>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>

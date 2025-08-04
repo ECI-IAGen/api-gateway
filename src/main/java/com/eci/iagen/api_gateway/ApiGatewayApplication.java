@@ -2,7 +2,9 @@ package com.eci.iagen.api_gateway;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+
 import io.github.cdimascio.dotenv.Dotenv;
+import io.github.cdimascio.dotenv.DotenvException;
 
 @SpringBootApplication
 public class ApiGatewayApplication {
@@ -20,7 +22,7 @@ public class ApiGatewayApplication {
 				logger.info("Setting system property: {}={}", key, entry.getValue());
 				System.setProperty(key, entry.getValue());
 			});
-		} catch (Exception e) {
+		} catch (DotenvException e) {
 			// Continue without .env file
 		}
 		SpringApplication.run(ApiGatewayApplication.class, args);

@@ -26,7 +26,10 @@ public class Evaluation {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "evaluator_id", nullable = false)
     private User evaluator;
-
+    
+    @Column(name = "evaluation_type", nullable = false)
+    private String evaluationType;
+    
     @Column(precision = 5, scale = 2)
     private BigDecimal score;
 
@@ -35,7 +38,7 @@ public class Evaluation {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
-
+    
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

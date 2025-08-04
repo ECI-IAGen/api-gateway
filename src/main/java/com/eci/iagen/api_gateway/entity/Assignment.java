@@ -4,8 +4,10 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "assignment")
@@ -29,4 +31,15 @@ public class Assignment {
 
     @Column(name = "due_date", nullable = false)
     private LocalDateTime dueDate;
+    
+    // The class this assignment belongs to
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "class_id", nullable = false)
+    @JsonIgnore
+    private Class classEntity;
+    
+    // Submissions for this assignment
+    @OneToMany(mappedBy = "assignment", fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<Submission> submissions;
 }

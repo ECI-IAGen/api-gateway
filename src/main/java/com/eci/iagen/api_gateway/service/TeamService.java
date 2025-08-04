@@ -33,26 +33,6 @@ public class TeamService {
                 .map(this::convertToDTO);
     }
 
-    @Transactional(readOnly = true)
-    public Optional<TeamDTO> getTeamByName(String name) {
-        return teamRepository.findByName(name)
-                .map(this::convertToDTO);
-    }
-
-    @Transactional(readOnly = true)
-    public List<TeamDTO> getTeamsByUserId(Long userId) {
-        return teamRepository.findTeamsByUserId(userId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<TeamDTO> getTeamsByNameContaining(String name) {
-        return teamRepository.findByNameContaining(name).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
     @Transactional
     public TeamDTO createTeam(TeamDTO teamDTO) {
         if (teamRepository.existsByName(teamDTO.getName())) {
@@ -88,45 +68,6 @@ public class TeamService {
                     
                     return convertToDTO(savedTeam);
                 });
-    }
-
-    @Transactional
-    public TeamDTO addUserToTeam(Long teamId, Long userId) {
-        Team team = teamRepository.findById(teamId)
-                .orElseThrow(() -> new IllegalArgumentException("Team not found with id: " + teamId));
-        
-        // Verificar que el usuario existe
-        if (!userRepository.existsById(userId)) {
-            throw new IllegalArgumentException("User not found with id: " + userId);
-        }
-
-        // Verificar si la relación ya existe
-        List<Team> currentTeams = teamRepository.findTeamsByUserId(userId);
-        boolean alreadyInTeam = currentTeams.stream()
-                .anyMatch(t -> t.getId().equals(teamId));
-        
-        if (!alreadyInTeam) {
-            // Usar query nativa para agregar la relación directamente
-            userRepository.addUserTeamRelationship(userId, teamId);
-        }
-
-        return convertToDTO(team);
-    }
-
-    @Transactional
-    public TeamDTO removeUserFromTeam(Long teamId, Long userId) {
-        Team team = teamRepository.findById(teamId)
-                .orElseThrow(() -> new IllegalArgumentException("Team not found with id: " + teamId));
-        
-        // Verificar que el usuario existe
-        if (!userRepository.existsById(userId)) {
-            throw new IllegalArgumentException("User not found with id: " + userId);
-        }
-
-        // Usar query nativa para remover la relación directamente
-        userRepository.removeUserTeamRelationship(userId, teamId);
-
-        return convertToDTO(team);
     }
 
     @Transactional

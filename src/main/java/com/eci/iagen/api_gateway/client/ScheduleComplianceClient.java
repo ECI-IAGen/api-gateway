@@ -1,7 +1,8 @@
 package com.eci.iagen.api_gateway.client;
 
-import com.eci.iagen.api_gateway.dto.ScheduleComplianceRequest;
-import com.eci.iagen.api_gateway.dto.ScheduleComplianceResponse;
+import com.eci.iagen.api_gateway.dto.request.ScheduleComplianceRequest;
+import com.eci.iagen.api_gateway.dto.response.ScheduleComplianceResponse;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,6 +31,10 @@ public class ScheduleComplianceClient {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+
+        log.info("Request URL: {}", url);
+        log.info("Request Headers: {}", headers);
+        log.info("Request Body: {}", request);
 
         HttpEntity<ScheduleComplianceRequest> entity = new HttpEntity<>(request, headers);
 

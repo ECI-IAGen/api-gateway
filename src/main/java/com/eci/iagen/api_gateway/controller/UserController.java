@@ -29,25 +29,6 @@ public class UserController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/email/{email}")
-    public ResponseEntity<UserDTO> getUserByEmail(@PathVariable String email) {
-        return userService.getUserByEmail(email)
-                .map(user -> ResponseEntity.ok(user))
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/role/{roleId}")
-    public ResponseEntity<List<UserDTO>> getUsersByRoleId(@PathVariable Long roleId) {
-        List<UserDTO> users = userService.getUsersByRoleId(roleId);
-        return ResponseEntity.ok(users);
-    }
-
-    @GetMapping("/search")
-    public ResponseEntity<List<UserDTO>> getUsersByNameContaining(@RequestParam String name) {
-        List<UserDTO> users = userService.getUsersByNameContaining(name);
-        return ResponseEntity.ok(users);
-    }
-
     @PostMapping
     public ResponseEntity<UserDTO> createUser(@RequestBody UserDTO userDTO) {
         try {

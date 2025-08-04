@@ -1,4 +1,4 @@
-package com.eci.iagen.api_gateway.dto;
+package com.eci.iagen.api_gateway.dto.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -23,5 +23,15 @@ public class ScheduleComplianceRequest {
         private String sha;
         private String message;
         private LocalDateTime date;
+    }
+
+    @Override
+    public String toString() {
+        return "ScheduleComplianceRequest{" +
+                "repositoryUrl='" + repositoryUrl + '\'' +
+                ", dueDate=" + dueDate +
+                ", submissionDate=" + submissionDate +
+                ", commits=" + commits +
+                '}';
     }
 }

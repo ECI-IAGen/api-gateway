@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "feedback")
@@ -16,16 +17,23 @@ public class Feedback {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "evaluation_id", nullable = false)
-    private Evaluation evaluation;
-
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "submission_id", nullable = false, unique = true)
+    private Submission submission;
+    
+    @Column(name = "feedback_type", nullable = false)
+    private String feedbackType;
+    
+    @Column(columnDefinition = "text")
+    private String content;
+    
+    @Column(name = "feedback_date")
+    private LocalDateTime feedbackDate;
+    
+    // Keep legacy fields for backward compatibility
     @Column(columnDefinition = "text")
     private String strengths;
 
     @Column(columnDefinition = "text")
     private String improvements;
-
-    @Column(columnDefinition = "text")
-    private String comments;
 }

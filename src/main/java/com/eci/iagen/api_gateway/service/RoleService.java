@@ -30,12 +30,6 @@ public class RoleService {
                 .map(this::convertToDTO);
     }
 
-    @Transactional(readOnly = true)
-    public Optional<RoleDTO> getRoleByName(String name) {
-        return roleRepository.findByName(name)
-                .map(this::convertToDTO);
-    }
-
     @Transactional
     public RoleDTO createRole(RoleDTO roleDTO) {
         if (roleRepository.existsByName(roleDTO.getName())) {
