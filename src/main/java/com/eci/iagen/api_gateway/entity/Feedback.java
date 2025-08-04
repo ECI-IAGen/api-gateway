@@ -18,8 +18,8 @@ public class Feedback {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "evaluation_id", nullable = false, unique = true)
-    private Evaluation evaluation;
+    @JoinColumn(name = "submission_id", nullable = false, unique = true)
+    private Submission submission;
     
     @Column(name = "feedback_type", nullable = false)
     private String feedbackType;
@@ -36,7 +36,4 @@ public class Feedback {
 
     @Column(columnDefinition = "text")
     private String improvements;
-
-    @Column(columnDefinition = "text")
-    private String comments;
 }

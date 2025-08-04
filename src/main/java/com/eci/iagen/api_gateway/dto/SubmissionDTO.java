@@ -1,5 +1,6 @@
 package com.eci.iagen.api_gateway.dto;
 
+import com.eci.iagen.api_gateway.entity.Submission;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -30,5 +31,25 @@ public class SubmissionDTO {
         this.teamName = teamName;
         this.submittedAt = submittedAt;
         this.fileUrl = fileUrl;
+    }
+    
+    public static SubmissionDTO fromEntity(Submission submission) {
+        SubmissionDTO dto = new SubmissionDTO(
+                submission.getId(),
+                submission.getAssignment().getId(),
+                submission.getAssignment().getTitle(),
+                submission.getTeam().getId(),
+                submission.getTeam().getName(),
+                submission.getSubmittedAt(),
+                submission.getFileUrl()
+        );
+        
+        // Agregar información de la clase
+        if (submission.getAssignment().getClassEntity() != null) {
+            dto.setClassId(submission.getAssignment().getClassEntity().getId());
+            dto.setClassName(submission.getAssignment().getClassEntity().getName());
+        }
+        
+        return dto;
     }
 }

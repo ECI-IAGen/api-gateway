@@ -10,17 +10,15 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class FeedbackDTO {
     private Long id;
-    private Long evaluationId;
+    private Long submissionId;
     private String feedbackType;
     private String content;
     private LocalDateTime feedbackDate;
     
-    // Legacy fields for backward compatibility
     private String strengths;
     private String improvements;
-    private String comments;
     
     // Helper fields for display
-    private String evaluatorName;
     private String teamName;
+    private String assignmentTitle;
 }

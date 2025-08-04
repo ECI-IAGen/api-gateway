@@ -1,5 +1,6 @@
 package com.eci.iagen.api_gateway.dto;
 
+import com.eci.iagen.api_gateway.entity.Evaluation;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -41,5 +42,28 @@ public class EvaluationDTO {
         this.evaluationDate = evaluationDate;
         this.teamName = teamName;
         this.assignmentTitle = assignmentTitle;
+    }
+    
+    public static EvaluationDTO fromEntity(Evaluation evaluation) {
+        EvaluationDTO dto = new EvaluationDTO(
+                evaluation.getId(),
+                evaluation.getSubmission().getId(),
+                evaluation.getEvaluator().getId(),
+                evaluation.getEvaluator().getName(),
+                evaluation.getEvaluationType(),
+                evaluation.getScore(),
+                evaluation.getCriteriaJson(),
+                evaluation.getCreatedAt(),
+                evaluation.getCreatedAt(), // evaluationDate mapea al mismo createdAt
+                evaluation.getSubmission().getTeam().getName(),
+                evaluation.getSubmission().getAssignment().getTitle());
+        
+        // Agregar información de la clase
+        if (evaluation.getSubmission().getAssignment().getClassEntity() != null) {
+            dto.setClassId(evaluation.getSubmission().getAssignment().getClassEntity().getId());
+            dto.setClassName(evaluation.getSubmission().getAssignment().getClassEntity().getName());
+        }
+        
+        return dto;
     }
 }

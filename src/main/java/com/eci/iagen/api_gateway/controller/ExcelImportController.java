@@ -1,6 +1,6 @@
 package com.eci.iagen.api_gateway.controller;
 
-import com.eci.iagen.api_gateway.dto.ExcelImportResponseDTO;
+import com.eci.iagen.api_gateway.dto.response.ExcelImportResponseDTO;
 import com.eci.iagen.api_gateway.service.ExcelImportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

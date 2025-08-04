@@ -1,10 +1,12 @@
 package com.eci.iagen.api_gateway.service;
 
+import com.eci.iagen.api_gateway.client.CodeAnalysisClient;
 import com.eci.iagen.api_gateway.client.ScheduleComplianceClient;
 import com.eci.iagen.api_gateway.controller.EvaluationController;
 import com.eci.iagen.api_gateway.dto.EvaluationDTO;
-import com.eci.iagen.api_gateway.dto.ScheduleComplianceRequest;
-import com.eci.iagen.api_gateway.dto.ScheduleComplianceResponse;
+import com.eci.iagen.api_gateway.dto.SubmissionDTO;
+import com.eci.iagen.api_gateway.dto.request.ScheduleComplianceRequest;
+import com.eci.iagen.api_gateway.dto.response.ScheduleComplianceResponse;
 import com.eci.iagen.api_gateway.entity.Evaluation;
 import com.eci.iagen.api_gateway.entity.Submission;
 import com.eci.iagen.api_gateway.entity.User;
@@ -49,6 +51,7 @@ public class EvaluationService {
     private final UserRepository userRepository;
     private final RestTemplate restTemplate;
     private final ScheduleComplianceClient scheduleComplianceClient;
+    private final CodeAnalysisClient codeAnalysisClient;
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(EvaluationController.class);
 
 
@@ -267,6 +270,75 @@ public class EvaluationService {
 
         Evaluation savedEvaluation = evaluationRepository.save(evaluation);
         return convertToDTO(savedEvaluation);
+    }
+
+    @Transactional
+    public EvaluationDTO evaluateGoodPractices(Long submissionId, Long evaluatorId, boolean usingIA) {
+        logger.info("Evaluating good practices for submission {} by evaluator {} using {}",
+                   submissionId, evaluatorId, usingIA ? "LLM Analysis" : "Checkstyle Analysis");
+
+        Submission submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new IllegalArgumentException("Submission not found with id: " + submissionId));
+
+        User evaluator = userRepository.findById(evaluatorId)
+                .orElseThrow(() -> new IllegalArgumentException("Evaluator not found with id: " + evaluatorId));
+
+        try {
+            // Convertir la submission a DTO para enviar al servicio externo
+            SubmissionDTO submissionDTO = convertSubmissionToDTO(submission);
+            
+            // Llamar al servicio apropiado según el parámetro usingIA
+            EvaluationDTO externalEvaluation;
+            if (usingIA) {
+                log.info("Calling LLM analysis service for submission {}", submissionId);
+                externalEvaluation = codeAnalysisClient.performLLMAnalysis(submissionDTO);
+            } else {
+                log.info("Calling Checkstyle analysis service for submission {}", submissionId);
+                externalEvaluation = codeAnalysisClient.performCheckstyleAnalysis(submissionDTO);
+            }
+            
+            // Crear y guardar la evaluación basada en la respuesta del servicio externo
+            Evaluation evaluation = new Evaluation();
+            evaluation.setSubmission(submission);
+            evaluation.setEvaluator(evaluator);
+            evaluation.setEvaluationType(usingIA ? "GOOD_PRACTICES_LLM" : "GOOD_PRACTICES_CHECKSTYLE");
+            evaluation.setScore(externalEvaluation.getScore());
+            evaluation.setCriteriaJson(externalEvaluation.getCriteriaJson());
+            evaluation.setCreatedAt(LocalDateTime.now());
+
+            Evaluation savedEvaluation = evaluationRepository.save(evaluation);
+            return convertToDTO(savedEvaluation);
+            
+        } catch (Exception e) {
+            log.error("Error calling external code analysis service for submission {}: {}", 
+                     submissionId, e.getMessage(), e);
+            
+            // Fallback: crear una evaluación de error
+            Evaluation evaluation = new Evaluation();
+            evaluation.setSubmission(submission);
+            evaluation.setEvaluator(evaluator);
+            evaluation.setEvaluationType(usingIA ? "GOOD_PRACTICES_LLM_ERROR" : "GOOD_PRACTICES_CHECKSTYLE_ERROR");
+            evaluation.setScore(BigDecimal.valueOf(0.0));
+            
+            // Criteria JSON con información del error
+            Map<String, Object> criteria = new LinkedHashMap<>();
+            criteria.put("evaluationMethod", usingIA ? "LLM Analysis (Failed)" : "Checkstyle Analysis (Failed)");
+            criteria.put("status", "ERROR");
+            criteria.put("error", e.getMessage());
+            criteria.put("evaluationDate", LocalDateTime.now().toString());
+            
+            try {
+                String criteriaJson = new ObjectMapper().writeValueAsString(criteria);
+                evaluation.setCriteriaJson(criteriaJson);
+            } catch (JsonProcessingException jsonE) {
+                evaluation.setCriteriaJson("{\"error\":\"Could not generate criteria JSON\"}");
+            }
+            
+            evaluation.setCreatedAt(LocalDateTime.now());
+
+            Evaluation savedEvaluation = evaluationRepository.save(evaluation);
+            return convertToDTO(savedEvaluation);
+        }
     }
 
     private List<CommitInfo> fetchGitHubCommits(String repoUrl) {
@@ -577,5 +649,25 @@ public class EvaluationService {
         public String getCriteriaJson() {
             return criteriaJson;
         }
+    }
+
+    private SubmissionDTO convertSubmissionToDTO(Submission submission) {
+        SubmissionDTO dto = new SubmissionDTO(
+                submission.getId(),
+                submission.getAssignment().getId(),
+                submission.getAssignment().getTitle(),
+                submission.getTeam().getId(),
+                submission.getTeam().getName(),
+                submission.getSubmittedAt(),
+                submission.getFileUrl()
+        );
+        
+        // Agregar información de la clase
+        if (submission.getAssignment().getClassEntity() != null) {
+            dto.setClassId(submission.getAssignment().getClassEntity().getId());
+            dto.setClassName(submission.getAssignment().getClassEntity().getName());
+        }
+        
+        return dto;
     }
 }

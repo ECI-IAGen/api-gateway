@@ -1,7 +1,8 @@
 package com.eci.iagen.api_gateway.client;
 
-import com.eci.iagen.api_gateway.dto.ScheduleComplianceRequest;
-import com.eci.iagen.api_gateway.dto.ScheduleComplianceResponse;
+import com.eci.iagen.api_gateway.dto.request.ScheduleComplianceRequest;
+import com.eci.iagen.api_gateway.dto.response.ScheduleComplianceResponse;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

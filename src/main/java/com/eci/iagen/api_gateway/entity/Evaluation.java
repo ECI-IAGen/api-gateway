@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -39,11 +38,6 @@ public class Evaluation {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
-    
-    // One feedback per evaluation
-    @OneToOne(mappedBy = "evaluation", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JsonIgnore
-    private Feedback feedback;
     
     @PrePersist
     protected void onCreate() {

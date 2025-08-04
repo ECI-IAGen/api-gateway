@@ -113,13 +113,31 @@ public class EvaluationController {
         return ResponseEntity.notFound().build();
     }
 
-    @PostMapping("/auto/{submissionId}/{evaluatorId}")
+    @PostMapping("/auto/scheduler/{submissionId}/{evaluatorId}")
     public ResponseEntity<EvaluationDTO> autoEvaluateGitHubCommits(
             @PathVariable Long submissionId,
             @PathVariable Long evaluatorId) {
         try {
-            logger.info("Auto-evaluating submission {} by evaluator {}", submissionId, evaluatorId);
+            logger.info("Auto-evaluating GitHub commits for submission {} by evaluator {}", submissionId, evaluatorId);
             EvaluationDTO evaluation = evaluationService.evaluateGitHubCommits(submissionId, evaluatorId);
+            return ResponseEntity.status(HttpStatus.CREATED).body(evaluation);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(null);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);
+        }
+    }
+
+    @PostMapping("/auto/good-practice/{submissionId}/{evaluatorId}")
+    public ResponseEntity<EvaluationDTO> autoEvaluateGoodPractices(
+            @PathVariable Long submissionId,
+            @PathVariable Long evaluatorId,
+            @RequestParam(name = "using-ia", defaultValue = "false") boolean usingIA) {
+        try {
+            logger.info("Auto-evaluating good practices for submission {} by evaluator {} using {}",
+                       submissionId, evaluatorId, usingIA ? "LLM Analysis" : "Checkstyle Analysis");
+            EvaluationDTO evaluation = evaluationService.evaluateGoodPractices(submissionId, evaluatorId, usingIA);
             return ResponseEntity.status(HttpStatus.CREATED).body(evaluation);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(null);

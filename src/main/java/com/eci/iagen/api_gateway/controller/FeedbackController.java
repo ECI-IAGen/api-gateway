@@ -30,23 +30,11 @@ public class FeedbackController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/evaluation/{evaluationId}")
-    public ResponseEntity<FeedbackDTO> getFeedbackByEvaluationId(@PathVariable Long evaluationId) {
-        return feedbackService.getFeedbackByEvaluationId(evaluationId)
+    @GetMapping("/submission/{submissionId}")
+    public ResponseEntity<FeedbackDTO> getFeedbackBySubmissionId(@PathVariable Long submissionId) {
+        return feedbackService.getFeedbackBySubmissionId(submissionId)
                 .map(feedback -> ResponseEntity.ok(feedback))
                 .orElse(ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/submission/{submissionId}")
-    public ResponseEntity<List<FeedbackDTO>> getFeedbacksBySubmissionId(@PathVariable Long submissionId) {
-        List<FeedbackDTO> feedbacks = feedbackService.getFeedbacksBySubmissionId(submissionId);
-        return ResponseEntity.ok(feedbacks);
-    }
-
-    @GetMapping("/evaluator/{evaluatorId}")
-    public ResponseEntity<List<FeedbackDTO>> getFeedbacksByEvaluatorId(@PathVariable Long evaluatorId) {
-        List<FeedbackDTO> feedbacks = feedbackService.getFeedbacksByEvaluatorId(evaluatorId);
-        return ResponseEntity.ok(feedbacks);
     }
 
     @GetMapping("/team/{teamId}")
@@ -100,5 +88,17 @@ public class FeedbackController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @PostMapping("/auto/equipo/{submissionId}")
+    public ResponseEntity<FeedbackDTO> generateTeamFeedback(@PathVariable Long submissionId) {
+        try {
+            FeedbackDTO feedback = feedbackService.generateTeamFeedback(submissionId);
+            return ResponseEntity.status(HttpStatus.CREATED).body(feedback);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }

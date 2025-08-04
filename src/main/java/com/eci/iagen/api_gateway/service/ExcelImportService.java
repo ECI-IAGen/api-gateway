@@ -1,6 +1,6 @@
 package com.eci.iagen.api_gateway.service;
 
-import com.eci.iagen.api_gateway.dto.ExcelImportResponseDTO;
+import com.eci.iagen.api_gateway.dto.response.ExcelImportResponseDTO;
 import com.eci.iagen.api_gateway.entity.Class;
 import com.eci.iagen.api_gateway.entity.Role;
 import com.eci.iagen.api_gateway.entity.Team;

@@ -12,20 +12,14 @@ import java.util.Optional;
 @Repository
 public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
     
-    Optional<Feedback> findByEvaluationId(Long evaluationId);
+    Optional<Feedback> findBySubmissionId(Long submissionId);
     
-    Optional<Feedback> findByEvaluationIdAndId(Long evaluationId, Long feedbackId);
+    Optional<Feedback> findBySubmissionIdAndId(Long submissionId, Long feedbackId);
     
-    @Query("SELECT f FROM Feedback f WHERE f.evaluation.submission.id = :submissionId")
-    List<Feedback> findBySubmissionId(@Param("submissionId") Long submissionId);
-    
-    @Query("SELECT f FROM Feedback f WHERE f.evaluation.evaluator.id = :evaluatorId")
-    List<Feedback> findByEvaluatorId(@Param("evaluatorId") Long evaluatorId);
-    
-    @Query("SELECT f FROM Feedback f WHERE f.evaluation.submission.team.id = :teamId")
+    @Query("SELECT f FROM Feedback f WHERE f.submission.team.id = :teamId")
     List<Feedback> findByTeamId(@Param("teamId") Long teamId);
     
-    @Query("SELECT f FROM Feedback f WHERE f.evaluation.submission.assignment.id = :assignmentId")
+    @Query("SELECT f FROM Feedback f WHERE f.submission.assignment.id = :assignmentId")
     List<Feedback> findByAssignmentId(@Param("assignmentId") Long assignmentId);
     
     @Query("SELECT f FROM Feedback f WHERE f.strengths IS NOT NULL AND f.strengths != ''")
