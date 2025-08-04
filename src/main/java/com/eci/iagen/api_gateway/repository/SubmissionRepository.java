@@ -20,4 +20,7 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     @Query("SELECT s FROM Submission s WHERE s.assignment.id = :assignmentId AND s.team.id = :teamId")
     Optional<Submission> findByAssignmentIdAndTeamId(@Param("assignmentId") Long assignmentId, 
                                                     @Param("teamId") Long teamId);
+    
+    @Query("SELECT s FROM Submission s LEFT JOIN FETCH s.assignment LEFT JOIN FETCH s.team WHERE s.assignment.id = :assignmentId")
+    List<Submission> findByAssignmentId(@Param("assignmentId") Long assignmentId);
 }

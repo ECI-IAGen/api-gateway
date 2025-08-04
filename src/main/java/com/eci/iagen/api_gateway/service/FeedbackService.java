@@ -12,7 +12,9 @@ import com.eci.iagen.api_gateway.client.TeamFeedbackClient;
 import com.eci.iagen.api_gateway.dto.EvaluationDTO;
 import com.eci.iagen.api_gateway.dto.FeedbackDTO;
 import com.eci.iagen.api_gateway.dto.SubmissionDTO;
+import com.eci.iagen.api_gateway.dto.request.GeneralFeedbackRequest;
 import com.eci.iagen.api_gateway.dto.request.TeamFeedbackRequest;
+import com.eci.iagen.api_gateway.dto.response.GeneralFeedbackResponse;
 import com.eci.iagen.api_gateway.entity.Evaluation;
 import com.eci.iagen.api_gateway.entity.Feedback;
 import com.eci.iagen.api_gateway.entity.Submission;
@@ -175,5 +177,37 @@ public class FeedbackService {
         dto.setAssignmentTitle(feedback.getSubmission().getAssignment().getTitle());
         
         return dto;
+    }
+    
+    public GeneralFeedbackResponse generateCoordinatorFeedback(GeneralFeedbackRequest request) {
+        log.info("Generating coordinator feedback for message: {}", request.getMessage());
+        
+        try {
+            // Llamar al microservicio
+            GeneralFeedbackResponse response = teamFeedbackClient.generateCoordinatorFeedback(request);
+            
+            log.info("Coordinator feedback generated successfully");
+            return response;
+            
+        } catch (Exception e) {
+            log.error("Error generating coordinator feedback: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to generate coordinator feedback: " + e.getMessage(), e);
+        }
+    }
+    
+    public GeneralFeedbackResponse generateTeacherFeedback(GeneralFeedbackRequest request) {
+        log.info("Generating teacher feedback for message: {}", request.getMessage());
+        
+        try {
+            // Llamar al microservicio
+            GeneralFeedbackResponse response = teamFeedbackClient.generateTeacherFeedback(request);
+            
+            log.info("Teacher feedback generated successfully");
+            return response;
+            
+        } catch (Exception e) {
+            log.error("Error generating teacher feedback: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to generate teacher feedback: " + e.getMessage(), e);
+        }
     }
 }

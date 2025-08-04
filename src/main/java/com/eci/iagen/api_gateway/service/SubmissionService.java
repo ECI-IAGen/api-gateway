@@ -46,6 +46,13 @@ public class SubmissionService {
                 .map(SubmissionService::convertToDTO);
     }
 
+    @Transactional(readOnly = true)
+    public List<SubmissionDTO> getSubmissionsByAssignmentId(Long assignmentId) {
+        return submissionRepository.findByAssignmentId(assignmentId).stream()
+                .map(SubmissionService::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public SubmissionDTO createSubmission(SubmissionDTO submissionDTO) {
         Assignment assignment = assignmentRepository.findById(submissionDTO.getAssignmentId())
