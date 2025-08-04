@@ -36,26 +36,6 @@ public class UserService {
                 .map(this::convertToDTO);
     }
 
-    @Transactional(readOnly = true)
-    public Optional<UserDTO> getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .map(this::convertToDTO);
-    }
-
-    @Transactional(readOnly = true)
-    public List<UserDTO> getUsersByRoleId(Long roleId) {
-        return userRepository.findByRoleId(roleId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<UserDTO> getUsersByNameContaining(String name) {
-        return userRepository.findByNameContaining(name).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
     @Transactional
     public UserDTO createUser(UserDTO userDTO) {
         if (userRepository.existsByEmail(userDTO.getEmail())) {

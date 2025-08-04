@@ -15,20 +15,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
     
-    @Query("SELECT u FROM User u WHERE u.role.id = :roleId")
-    List<User> findByRoleId(@Param("roleId") Long roleId);
-    
-    @Query("SELECT u FROM User u WHERE u.name LIKE %:name%")
-    List<User> findByNameContaining(@Param("name") String name);
-    
     @Query("SELECT u FROM User u JOIN u.teams t WHERE t.id = :teamId")
     List<User> findUsersByTeamId(@Param("teamId") Long teamId);
-    
-    @Query("SELECT u FROM User u WHERE u.role.name = :roleName")
-    List<User> findByRoleName(@Param("roleName") String roleName);
-    
-    @Query("SELECT u FROM User u WHERE u.email IS NOT NULL")
-    List<User> findUsersWithEmail();
     
     @Modifying
     @Query(value = "DELETE FROM api_gateway.team_user WHERE user_id = :userId", nativeQuery = true)

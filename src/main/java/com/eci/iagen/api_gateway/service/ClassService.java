@@ -38,41 +38,7 @@ public class ClassService {
         return classRepository.findByIdWithTeamsAndProfessor(id)
                 .map(this::convertToDTO);
     }
-
-    @Transactional(readOnly = true)
-    public Optional<ClassDTO> getClassByName(String name) {
-        return classRepository.findByName(name)
-                .map(this::convertToDTO);
-    }
-
-    @Transactional(readOnly = true)
-    public List<ClassDTO> getClassesByProfessorId(Long professorId) {
-        return classRepository.findByProfessorId(professorId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<ClassDTO> getClassesByNameContaining(String name) {
-        return classRepository.findByNameContaining(name).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<ClassDTO> getClassesBySemester(String semester) {
-        return classRepository.findBySemester(semester).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<ClassDTO> getClassesByTeamId(Long teamId) {
-        return classRepository.findByTeamId(teamId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
+    
     @Transactional
     public ClassDTO createClass(ClassDTO classDTO) {
         if (classRepository.existsByName(classDTO.getName())) {
@@ -123,42 +89,6 @@ public class ClassService {
                     
                     return convertToDTO(classRepository.findById(savedClass.getId()).orElse(savedClass));
                 });
-    }
-
-    @Transactional
-    public ClassDTO addTeamToClass(Long classId, Long teamId) {
-        Class classEntity = classRepository.findById(classId)
-                .orElseThrow(() -> new IllegalArgumentException("Class not found with id: " + classId));
-        
-        Team team = teamRepository.findById(teamId)
-                .orElseThrow(() -> new IllegalArgumentException("Team not found with id: " + teamId));
-
-        // Verificar si la relación ya existe
-        boolean alreadyEnrolled = classEntity.getTeams().stream()
-                .anyMatch(t -> t.getId().equals(teamId));
-        
-        if (!alreadyEnrolled) {
-            classEntity.getTeams().add(team);
-            classRepository.save(classEntity);
-        }
-
-        return convertToDTO(classEntity);
-    }
-
-    @Transactional
-    public ClassDTO removeTeamFromClass(Long classId, Long teamId) {
-        Class classEntity = classRepository.findById(classId)
-                .orElseThrow(() -> new IllegalArgumentException("Class not found with id: " + classId));
-        
-        // Verificar que el equipo existe
-        if (!teamRepository.existsById(teamId)) {
-            throw new IllegalArgumentException("Team not found with id: " + teamId);
-        }
-
-        classEntity.getTeams().removeIf(team -> team.getId().equals(teamId));
-        classRepository.save(classEntity);
-
-        return convertToDTO(classEntity);
     }
 
     @Transactional

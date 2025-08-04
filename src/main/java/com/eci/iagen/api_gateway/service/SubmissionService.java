@@ -1,6 +1,13 @@
 package com.eci.iagen.api_gateway.service;
 
-import com.eci.iagen.api_gateway.dto.ClassDTO;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.eci.iagen.api_gateway.dto.SubmissionDTO;
 import com.eci.iagen.api_gateway.entity.Assignment;
 import com.eci.iagen.api_gateway.entity.Submission;
@@ -8,14 +15,8 @@ import com.eci.iagen.api_gateway.entity.Team;
 import com.eci.iagen.api_gateway.repository.AssignmentRepository;
 import com.eci.iagen.api_gateway.repository.SubmissionRepository;
 import com.eci.iagen.api_gateway.repository.TeamRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -28,55 +29,21 @@ public class SubmissionService {
     @Transactional(readOnly = true)
     public List<SubmissionDTO> getAllSubmissions() {
         return submissionRepository.findAllWithAssignmentAndTeam().stream()
-                .map(this::convertToDTO)
+                .map(SubmissionService::convertToDTO)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public Optional<SubmissionDTO> getSubmissionById(Long id) {
         return submissionRepository.findById(id)
-                .map(this::convertToDTO);
+                .map(SubmissionService::convertToDTO);
     }
 
-    @Transactional(readOnly = true)
-    public List<SubmissionDTO> getSubmissionsByAssignmentId(Long assignmentId) {
-        return submissionRepository.findByAssignmentId(assignmentId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<SubmissionDTO> getSubmissionsByTeamId(Long teamId) {
-        return submissionRepository.findByTeamId(teamId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
 
     @Transactional(readOnly = true)
     public Optional<SubmissionDTO> getSubmissionByAssignmentAndTeam(Long assignmentId, Long teamId) {
         return submissionRepository.findByAssignmentIdAndTeamId(assignmentId, teamId)
-                .map(this::convertToDTO);
-    }
-
-    @Transactional(readOnly = true)
-    public List<SubmissionDTO> getSubmissionsByUserId(Long userId) {
-        return submissionRepository.findSubmissionsByUserId(userId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<SubmissionDTO> getSubmissionsBetweenDates(LocalDateTime startDate, LocalDateTime endDate) {
-        return submissionRepository.findSubmissionsBetweenDates(startDate, endDate).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<SubmissionDTO> getSubmissionsByAssignmentOrderByDate(Long assignmentId) {
-        return submissionRepository.findByAssignmentIdOrderBySubmittedAtDesc(assignmentId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+                .map(SubmissionService::convertToDTO);
     }
 
     @Transactional
@@ -126,45 +93,7 @@ public class SubmissionService {
         return false;
     }
 
-    @Transactional(readOnly = true)
-    public Optional<ClassDTO> getClassByAssignmentId(Long assignmentId) {
-        Assignment assignment = assignmentRepository.findById(assignmentId)
-                .orElseThrow(() -> new IllegalArgumentException("Assignment not found with id: " + assignmentId));
-        
-        if (assignment.getClassEntity() != null) {
-            return Optional.of(convertClassToDTO(assignment.getClassEntity()));
-        }
-        
-        return Optional.empty();
-    }
-    
-    @Transactional(readOnly = true)
-    public Optional<ClassDTO> getClassBySubmissionId(Long submissionId) {
-        Optional<Submission> submission = submissionRepository.findById(submissionId);
-        
-        if (submission.isPresent() && submission.get().getAssignment() != null) {
-            Assignment assignment = submission.get().getAssignment();
-            if (assignment.getClassEntity() != null) {
-                return Optional.of(convertClassToDTO(assignment.getClassEntity()));
-            }
-        }
-        
-        return Optional.empty();
-    }
-    
-    private ClassDTO convertClassToDTO(com.eci.iagen.api_gateway.entity.Class classEntity) {
-        return new ClassDTO(
-                classEntity.getId(),
-                classEntity.getName(),
-                classEntity.getDescription(),
-                classEntity.getProfessor() != null ? classEntity.getProfessor().getId() : null,
-                classEntity.getProfessor() != null ? classEntity.getProfessor().getName() : null,
-                classEntity.getCreatedAt(),
-                classEntity.getSemester()
-        );
-    }
-
-    private SubmissionDTO convertToDTO(Submission submission) {
+    public static SubmissionDTO convertToDTO(Submission submission) {
         SubmissionDTO dto = new SubmissionDTO(
                 submission.getId(),
                 submission.getAssignment().getId(),

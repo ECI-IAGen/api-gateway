@@ -1,5 +1,28 @@
 package com.eci.iagen.api_gateway.service;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
+
 import com.eci.iagen.api_gateway.client.CodeAnalysisClient;
 import com.eci.iagen.api_gateway.client.ScheduleComplianceClient;
 import com.eci.iagen.api_gateway.controller.EvaluationController;
@@ -18,28 +41,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import org.springframework.http.MediaType;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -69,52 +70,6 @@ public class EvaluationService {
     public Optional<EvaluationDTO> getEvaluationById(Long id) {
         return evaluationRepository.findById(id)
                 .map(this::convertToDTO);
-    }
-
-    @Transactional(readOnly = true)
-    public List<EvaluationDTO> getEvaluationsBySubmissionId(Long submissionId) {
-        return evaluationRepository.findBySubmissionId(submissionId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<EvaluationDTO> getEvaluationsByEvaluatorId(Long evaluatorId) {
-        return evaluationRepository.findByEvaluatorId(evaluatorId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<EvaluationDTO> getEvaluationBySubmissionAndEvaluator(Long submissionId, Long evaluatorId) {
-        return evaluationRepository.findBySubmissionIdAndEvaluatorId(submissionId, evaluatorId)
-                .map(this::convertToDTO);
-    }
-
-    @Transactional(readOnly = true)
-    public List<EvaluationDTO> getEvaluationsByScoreRange(BigDecimal minScore, BigDecimal maxScore) {
-        return evaluationRepository.findByScoreBetween(minScore, maxScore).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<EvaluationDTO> getEvaluationsBetweenDates(LocalDateTime startDate, LocalDateTime endDate) {
-        return evaluationRepository.findEvaluationsBetweenDates(startDate, endDate).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<EvaluationDTO> getEvaluationsByTeamId(Long teamId) {
-        return evaluationRepository.findByTeamIdOrderByCreatedAtDesc(teamId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public BigDecimal getAverageScoreByAssignmentId(Long assignmentId) {
-        return evaluationRepository.findAverageScoreByAssignmentId(assignmentId);
     }
 
     @Transactional
@@ -176,29 +131,6 @@ public class EvaluationService {
             return true;
         }
         return false;
-    }
-
-    private EvaluationDTO convertToDTO(Evaluation evaluation) {
-        EvaluationDTO dto = new EvaluationDTO(
-                evaluation.getId(),
-                evaluation.getSubmission().getId(),
-                evaluation.getEvaluator().getId(),
-                evaluation.getEvaluator().getName(),
-                evaluation.getEvaluationType(),
-                evaluation.getScore(),
-                evaluation.getCriteriaJson(),
-                evaluation.getCreatedAt(),
-                evaluation.getCreatedAt(), // evaluationDate mapea al mismo createdAt
-                evaluation.getSubmission().getTeam().getName(),
-                evaluation.getSubmission().getAssignment().getTitle());
-        
-        // Agregar información de la clase
-        if (evaluation.getSubmission().getAssignment().getClassEntity() != null) {
-            dto.setClassId(evaluation.getSubmission().getAssignment().getClassEntity().getId());
-            dto.setClassName(evaluation.getSubmission().getAssignment().getClassEntity().getName());
-        }
-        
-        return dto;
     }
 
     @Transactional
@@ -285,8 +217,8 @@ public class EvaluationService {
 
         try {
             // Convertir la submission a DTO para enviar al servicio externo
-            SubmissionDTO submissionDTO = convertSubmissionToDTO(submission);
-            
+            SubmissionDTO submissionDTO = SubmissionService.convertToDTO(submission);
+
             // Llamar al servicio apropiado según el parámetro usingIA
             EvaluationDTO externalEvaluation;
             if (usingIA) {
@@ -362,7 +294,7 @@ public class EvaluationService {
                     Object[].class);
 
             return processGitHubResponse(response.getBody());
-        } catch (Exception e) {
+        } catch (RestClientException e) {
             log.error("Error fetching commits from GitHub URL: {}", apiUrl, e);
             throw new RuntimeException("Error fetching commits from GitHub: " + e.getMessage(), e);
         }
@@ -507,7 +439,7 @@ public class EvaluationService {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> parsedMap = new ObjectMapper().readValue(legacyResult.getCriteriaJson(), Map.class);
                 criteriaMap = parsedMap;
-            } catch (Exception jsonE) {
+            } catch (JsonProcessingException jsonE) {
                 log.warn("Could not parse legacy criteria JSON", jsonE);
             }
 
@@ -540,20 +472,19 @@ public class EvaluationService {
         // Ordenar commits por fecha (más reciente primero)
         commits.sort(Comparator.comparing(CommitInfo::getDate).reversed());
 
-        // Determinar fecha efectiva (último commit si existe)
-        LocalDateTime effectiveDate = dueDate; // Por defecto, si no hay commits tardíos
+        // Calcular días tardíos si hay commits
         if (!commits.isEmpty()) {
             CommitInfo lastCommit = commits.get(0);
-            effectiveDate = lastCommit.getDate();
+            LocalDateTime lastCommitDate = lastCommit.getDate();
 
             // Calcular días tardíos usando la misma lógica que Schedule Compliance
-            if (effectiveDate.isAfter(dueDate)) {
+            if (lastCommitDate.isAfter(dueDate)) {
                 long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(
                         dueDate.toLocalDate(),
-                        effectiveDate.toLocalDate());
+                        lastCommitDate.toLocalDate());
 
                 // Si es el mismo día pero después de la hora, cuenta como 1 día tardío
-                if (daysBetween == 0 && effectiveDate.isAfter(dueDate)) {
+                if (daysBetween == 0 && lastCommitDate.isAfter(dueDate)) {
                     lateDays = 1;
                 } else {
                     lateDays = Math.max(0, (int) daysBetween);
@@ -561,7 +492,7 @@ public class EvaluationService {
             }
 
             log.info("Legacy method - Last commit: {}, Due: {}, Days late: {}",
-                    effectiveDate, dueDate, lateDays);
+                    lastCommitDate, dueDate, lateDays);
         }
 
         // Aplicar penalización por días tardíos (igual que Schedule Compliance)
@@ -651,23 +582,27 @@ public class EvaluationService {
         }
     }
 
-    private SubmissionDTO convertSubmissionToDTO(Submission submission) {
-        SubmissionDTO dto = new SubmissionDTO(
-                submission.getId(),
-                submission.getAssignment().getId(),
-                submission.getAssignment().getTitle(),
-                submission.getTeam().getId(),
-                submission.getTeam().getName(),
-                submission.getSubmittedAt(),
-                submission.getFileUrl()
-        );
+    private EvaluationDTO convertToDTO(Evaluation evaluation) {
+        EvaluationDTO dto = new EvaluationDTO(
+                evaluation.getId(),
+                evaluation.getSubmission().getId(),
+                evaluation.getEvaluator().getId(),
+                evaluation.getEvaluator().getName(),
+                evaluation.getEvaluationType(),
+                evaluation.getScore(),
+                evaluation.getCriteriaJson(),
+                evaluation.getCreatedAt(),
+                evaluation.getCreatedAt(), // evaluationDate mapea al mismo createdAt
+                evaluation.getSubmission().getTeam().getName(),
+                evaluation.getSubmission().getAssignment().getTitle());
         
         // Agregar información de la clase
-        if (submission.getAssignment().getClassEntity() != null) {
-            dto.setClassId(submission.getAssignment().getClassEntity().getId());
-            dto.setClassName(submission.getAssignment().getClassEntity().getName());
+        if (evaluation.getSubmission().getAssignment().getClassEntity() != null) {
+            dto.setClassId(evaluation.getSubmission().getAssignment().getClassEntity().getId());
+            dto.setClassName(evaluation.getSubmission().getAssignment().getClassEntity().getName());
         }
         
         return dto;
     }
+
 }

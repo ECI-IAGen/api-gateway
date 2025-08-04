@@ -21,15 +21,4 @@ public interface ClassRepository extends JpaRepository<Class, Long> {
     @Query("SELECT c FROM Class c LEFT JOIN FETCH c.teams LEFT JOIN FETCH c.professor WHERE c.id = :id")
     Optional<Class> findByIdWithTeamsAndProfessor(@Param("id") Long id);
     
-    @Query("SELECT c FROM Class c WHERE c.professor.id = :professorId")
-    List<Class> findByProfessorId(@Param("professorId") Long professorId);
-    
-    @Query("SELECT c FROM Class c WHERE c.name LIKE %:name%")
-    List<Class> findByNameContaining(@Param("name") String name);
-    
-    @Query("SELECT c FROM Class c WHERE c.semester = :semester")
-    List<Class> findBySemester(@Param("semester") String semester);
-    
-    @Query("SELECT c FROM Class c JOIN c.teams t WHERE t.id = :teamId")
-    List<Class> findByTeamId(@Param("teamId") Long teamId);
 }

@@ -1,16 +1,23 @@
 package com.eci.iagen.api_gateway.controller;
 
-import com.eci.iagen.api_gateway.dto.ClassDTO;
-import com.eci.iagen.api_gateway.dto.SubmissionDTO;
-import com.eci.iagen.api_gateway.service.SubmissionService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import com.eci.iagen.api_gateway.dto.SubmissionDTO;
+import com.eci.iagen.api_gateway.service.SubmissionService;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/submissions")
@@ -31,46 +38,6 @@ public class SubmissionController {
         return submissionService.getSubmissionById(id)
                 .map(submission -> ResponseEntity.ok(submission))
                 .orElse(ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/assignment/{assignmentId}")
-    public ResponseEntity<List<SubmissionDTO>> getSubmissionsByAssignmentId(@PathVariable Long assignmentId) {
-        List<SubmissionDTO> submissions = submissionService.getSubmissionsByAssignmentId(assignmentId);
-        return ResponseEntity.ok(submissions);
-    }
-
-    @GetMapping("/team/{teamId}")
-    public ResponseEntity<List<SubmissionDTO>> getSubmissionsByTeamId(@PathVariable Long teamId) {
-        List<SubmissionDTO> submissions = submissionService.getSubmissionsByTeamId(teamId);
-        return ResponseEntity.ok(submissions);
-    }
-
-    @GetMapping("/assignment/{assignmentId}/team/{teamId}")
-    public ResponseEntity<SubmissionDTO> getSubmissionByAssignmentAndTeam(
-            @PathVariable Long assignmentId, @PathVariable Long teamId) {
-        return submissionService.getSubmissionByAssignmentAndTeam(assignmentId, teamId)
-                .map(submission -> ResponseEntity.ok(submission))
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<SubmissionDTO>> getSubmissionsByUserId(@PathVariable Long userId) {
-        List<SubmissionDTO> submissions = submissionService.getSubmissionsByUserId(userId);
-        return ResponseEntity.ok(submissions);
-    }
-
-    @GetMapping("/between")
-    public ResponseEntity<List<SubmissionDTO>> getSubmissionsBetweenDates(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
-        List<SubmissionDTO> submissions = submissionService.getSubmissionsBetweenDates(startDate, endDate);
-        return ResponseEntity.ok(submissions);
-    }
-
-    @GetMapping("/assignment/{assignmentId}/ordered")
-    public ResponseEntity<List<SubmissionDTO>> getSubmissionsByAssignmentOrderByDate(@PathVariable Long assignmentId) {
-        List<SubmissionDTO> submissions = submissionService.getSubmissionsByAssignmentOrderByDate(assignmentId);
-        return ResponseEntity.ok(submissions);
     }
 
     @PostMapping
@@ -100,19 +67,5 @@ public class SubmissionController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.notFound().build();
-    }
-
-    @GetMapping("/class/{assignmentId}")
-    public ResponseEntity<ClassDTO> getClassByAssignmentId(@PathVariable Long assignmentId) {
-        return submissionService.getClassByAssignmentId(assignmentId)
-                .map(classDTO -> ResponseEntity.ok(classDTO))
-                .orElse(ResponseEntity.notFound().build());
-    }
-    
-    @GetMapping("/{submissionId}/class")
-    public ResponseEntity<ClassDTO> getClassBySubmissionId(@PathVariable Long submissionId) {
-        return submissionService.getClassBySubmissionId(submissionId)
-                .map(classDTO -> ResponseEntity.ok(classDTO))
-                .orElse(ResponseEntity.notFound().build());
     }
 }

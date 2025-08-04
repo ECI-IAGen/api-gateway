@@ -1,25 +1,27 @@
 package com.eci.iagen.api_gateway.service;
 
-import com.eci.iagen.api_gateway.client.TeamFeedbackClient;
-import com.eci.iagen.api_gateway.dto.FeedbackDTO;
-import com.eci.iagen.api_gateway.dto.SubmissionDTO;
-import com.eci.iagen.api_gateway.dto.request.TeamFeedbackRequest;
-import com.eci.iagen.api_gateway.dto.EvaluationDTO;
-import com.eci.iagen.api_gateway.entity.Submission;
-import com.eci.iagen.api_gateway.entity.Feedback;
-import com.eci.iagen.api_gateway.entity.Evaluation;
-import com.eci.iagen.api_gateway.repository.SubmissionRepository;
-import com.eci.iagen.api_gateway.repository.FeedbackRepository;
-import com.eci.iagen.api_gateway.repository.EvaluationRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.eci.iagen.api_gateway.client.TeamFeedbackClient;
+import com.eci.iagen.api_gateway.dto.EvaluationDTO;
+import com.eci.iagen.api_gateway.dto.FeedbackDTO;
+import com.eci.iagen.api_gateway.dto.SubmissionDTO;
+import com.eci.iagen.api_gateway.dto.request.TeamFeedbackRequest;
+import com.eci.iagen.api_gateway.entity.Evaluation;
+import com.eci.iagen.api_gateway.entity.Feedback;
+import com.eci.iagen.api_gateway.entity.Submission;
+import com.eci.iagen.api_gateway.repository.EvaluationRepository;
+import com.eci.iagen.api_gateway.repository.FeedbackRepository;
+import com.eci.iagen.api_gateway.repository.SubmissionRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
@@ -43,48 +45,7 @@ public class FeedbackService {
         return feedbackRepository.findById(id)
                 .map(this::convertToDTO);
     }
-
-    @Transactional(readOnly = true)
-    public Optional<FeedbackDTO> getFeedbackBySubmissionId(Long submissionId) {
-        return feedbackRepository.findBySubmissionId(submissionId)
-                .map(this::convertToDTO);
-    }
-
-    @Transactional(readOnly = true)
-    public List<FeedbackDTO> getFeedbacksBySubmissionId(Long submissionId) {
-        return feedbackRepository.findBySubmissionId(submissionId)
-                .map(feedback -> List.of(this.convertToDTO(feedback)))
-                .orElse(List.of());
-    }
-
-    @Transactional(readOnly = true)
-    public List<FeedbackDTO> getFeedbacksByTeamId(Long teamId) {
-        return feedbackRepository.findByTeamId(teamId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<FeedbackDTO> getFeedbacksByAssignmentId(Long assignmentId) {
-        return feedbackRepository.findByAssignmentId(assignmentId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<FeedbackDTO> getFeedbacksWithStrengths() {
-        return feedbackRepository.findFeedbackWithStrengths().stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<FeedbackDTO> getFeedbacksWithImprovements() {
-        return feedbackRepository.findFeedbackWithImprovements().stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
+    
     @Transactional
     public FeedbackDTO createFeedback(FeedbackDTO feedbackDTO) {
         Submission submission = submissionRepository.findById(feedbackDTO.getSubmissionId())

@@ -1,25 +1,33 @@
 package com.eci.iagen.api_gateway.controller;
 
-import com.eci.iagen.api_gateway.dto.AssignmentDTO;
-import com.eci.iagen.api_gateway.service.AssignmentService;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.eci.iagen.api_gateway.dto.AssignmentDTO;
+import com.eci.iagen.api_gateway.service.AssignmentService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @WebMvcTest(AssignmentController.class)
 class AssignmentControllerTest {
@@ -37,7 +45,7 @@ class AssignmentControllerTest {
     private List<AssignmentDTO> assignmentList;
 
     @BeforeEach
-    void setUp() {
+    public void setUp() {
         LocalDateTime startDate = LocalDateTime.of(2025, 7, 6, 9, 0);
         LocalDateTime dueDate = LocalDateTime.of(2025, 7, 13, 23, 59);
 
@@ -191,61 +199,5 @@ class AssignmentControllerTest {
                 .andExpect(status().isNotFound());
 
         verify(assignmentService, times(1)).deleteAssignment(999L);
-    }
-
-    @Test
-    void getUpcomingAssignments_ShouldReturnUpcomingAssignments() throws Exception {
-        when(assignmentService.getUpcomingAssignments()).thenReturn(assignmentList);
-
-        mockMvc.perform(get("/api/assignments/upcoming"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.length()").value(2));
-
-        verify(assignmentService, times(1)).getUpcomingAssignments();
-    }
-
-    @Test
-    void searchAssignmentsByTitle_ShouldReturnMatchingAssignments() throws Exception {
-        when(assignmentService.getAssignmentsByTitleContaining("Test"))
-                .thenReturn(Arrays.asList(sampleAssignmentDTO));
-
-        mockMvc.perform(get("/api/assignments/search").param("title", "Test"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].title").value("Test Assignment"));
-
-        verify(assignmentService, times(1)).getAssignmentsByTitleContaining("Test");
-    }
-
-    @Test
-    void getAssignmentStatistics_ShouldReturnStats() throws Exception {
-        when(assignmentService.countUpcomingAssignments()).thenReturn(5L);
-        when(assignmentService.countPastAssignments()).thenReturn(10L);
-        when(assignmentService.countActiveAssignments()).thenReturn(3L);
-
-        mockMvc.perform(get("/api/assignments/stats"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.upcoming").value(5))
-                .andExpect(jsonPath("$.past").value(10))
-                .andExpect(jsonPath("$.active").value(3));
-
-        verify(assignmentService, times(1)).countUpcomingAssignments();
-        verify(assignmentService, times(1)).countPastAssignments();
-        verify(assignmentService, times(1)).countActiveAssignments();
-    }
-
-    @Test
-    void deleteOldAssignments_ShouldReturnDeletedCount() throws Exception {
-        when(assignmentService.deleteOldAssignments(30)).thenReturn(5);
-
-        mockMvc.perform(delete("/api/assignments/cleanup/30"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.deletedCount").value(5));
-
-        verify(assignmentService, times(1)).deleteOldAssignments(30);
     }
 }

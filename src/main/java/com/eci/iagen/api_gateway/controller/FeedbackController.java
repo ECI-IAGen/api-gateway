@@ -30,37 +30,6 @@ public class FeedbackController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/submission/{submissionId}")
-    public ResponseEntity<FeedbackDTO> getFeedbackBySubmissionId(@PathVariable Long submissionId) {
-        return feedbackService.getFeedbackBySubmissionId(submissionId)
-                .map(feedback -> ResponseEntity.ok(feedback))
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/team/{teamId}")
-    public ResponseEntity<List<FeedbackDTO>> getFeedbacksByTeamId(@PathVariable Long teamId) {
-        List<FeedbackDTO> feedbacks = feedbackService.getFeedbacksByTeamId(teamId);
-        return ResponseEntity.ok(feedbacks);
-    }
-
-    @GetMapping("/assignment/{assignmentId}")
-    public ResponseEntity<List<FeedbackDTO>> getFeedbacksByAssignmentId(@PathVariable Long assignmentId) {
-        List<FeedbackDTO> feedbacks = feedbackService.getFeedbacksByAssignmentId(assignmentId);
-        return ResponseEntity.ok(feedbacks);
-    }
-
-    @GetMapping("/with-strengths")
-    public ResponseEntity<List<FeedbackDTO>> getFeedbacksWithStrengths() {
-        List<FeedbackDTO> feedbacks = feedbackService.getFeedbacksWithStrengths();
-        return ResponseEntity.ok(feedbacks);
-    }
-
-    @GetMapping("/with-improvements")
-    public ResponseEntity<List<FeedbackDTO>> getFeedbacksWithImprovements() {
-        List<FeedbackDTO> feedbacks = feedbackService.getFeedbacksWithImprovements();
-        return ResponseEntity.ok(feedbacks);
-    }
-
     @PostMapping
     public ResponseEntity<FeedbackDTO> createFeedback(@RequestBody FeedbackDTO feedbackDTO) {
         try {

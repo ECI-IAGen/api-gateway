@@ -29,13 +29,6 @@ public class RoleController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/name/{name}")
-    public ResponseEntity<RoleDTO> getRoleByName(@PathVariable String name) {
-        return roleService.getRoleByName(name)
-                .map(role -> ResponseEntity.ok(role))
-                .orElse(ResponseEntity.notFound().build());
-    }
-
     @PostMapping
     public ResponseEntity<RoleDTO> createRole(@RequestBody RoleDTO roleDTO) {
         try {
