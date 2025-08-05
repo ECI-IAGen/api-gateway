@@ -27,7 +27,7 @@ public class JPlagServiceClient {
      */
     public ResponseEntity<Object> detectPlagiarism(Map<String, Object> request) {
         try {
-            String url = jplagServiceUrl + "/api/jplag/detect";
+            String url = jplagServiceUrl + "/api/plagiarism/analyze";
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -61,7 +61,7 @@ public class JPlagServiceClient {
      */
     public ResponseEntity<String> checkHealth() {
         try {
-            String url = jplagServiceUrl + "/api/jplag/health";
+            String url = jplagServiceUrl + "/api/plagiarism/health";
             ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
             log.info("JPlag service health check: {}", response.getBody());
             return response;
