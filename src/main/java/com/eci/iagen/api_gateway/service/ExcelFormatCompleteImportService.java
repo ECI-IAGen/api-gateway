@@ -2,6 +2,7 @@ package com.eci.iagen.api_gateway.service;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.ParseException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -1120,7 +1121,7 @@ public class ExcelFormatCompleteImportService {
             java.util.Date date = new java.text.SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy", java.util.Locale.ENGLISH).parse(trimmedDate);
             return date.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
             
-        } catch (Exception e) {
+        } catch (NumberFormatException | ParseException e) {
             // Último intento: si es un timestamp numérico o fecha de Excel
             try {
                 // Intentar como timestamp de Excel (días desde 1900-01-01)
