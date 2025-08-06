@@ -38,6 +38,21 @@ public class AssignmentController {
         }
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<AssignmentDTO> getAssignmentById(@PathVariable Long id) {
+        try {
+            return assignmentService.getAssignmentById(id)
+                    .map(assignment -> ResponseEntity.ok(assignment))
+                    .orElse(ResponseEntity.notFound().build());
+        } catch (IllegalArgumentException e) {
+            System.err.println("Invalid assignment ID: " + e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            System.err.println("Error retrieving assignment: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     @PostMapping
     public ResponseEntity<AssignmentDTO> createAssignment(@RequestBody AssignmentDTO assignmentDTO) {
         try {
@@ -53,7 +68,8 @@ public class AssignmentController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<AssignmentDTO> updateAssignment(@PathVariable Long id, @RequestBody AssignmentDTO assignmentDTO) {
+    public ResponseEntity<AssignmentDTO> updateAssignment(@PathVariable Long id,
+            @RequestBody AssignmentDTO assignmentDTO) {
         try {
             // Asegurar que el ID del path coincida con el DTO
             assignmentDTO.setId(id);
