@@ -1,15 +1,17 @@
 package com.eci.iagen.api_gateway.service;
 
-import com.eci.iagen.api_gateway.dto.RoleDTO;
-import com.eci.iagen.api_gateway.entity.Role;
-import com.eci.iagen.api_gateway.repository.RoleRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.eci.iagen.api_gateway.dto.RoleDTO;
+import com.eci.iagen.api_gateway.entity.Role;
+import com.eci.iagen.api_gateway.repository.RoleRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +29,12 @@ public class RoleService {
     @Transactional(readOnly = true)
     public Optional<RoleDTO> getRoleById(Long id) {
         return roleRepository.findById(id)
+                .map(this::convertToDTO);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<RoleDTO> findByName(String name) {
+        return roleRepository.findByName(name)
                 .map(this::convertToDTO);
     }
 

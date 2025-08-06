@@ -1,26 +1,31 @@
 package com.eci.iagen.api_gateway.service;
 
-import com.eci.iagen.api_gateway.dto.response.ExcelImportResponseDTO;
-import com.eci.iagen.api_gateway.entity.Class;
-import com.eci.iagen.api_gateway.entity.Role;
-import com.eci.iagen.api_gateway.entity.Team;
-import com.eci.iagen.api_gateway.entity.User;
-import com.eci.iagen.api_gateway.repository.ClassRepository;
-import com.eci.iagen.api_gateway.repository.RoleRepository;
-import com.eci.iagen.api_gateway.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.DateUtil;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.eci.iagen.api_gateway.dto.response.ExcelImportResponseDTO;
+import com.eci.iagen.api_gateway.entity.Class;
+import com.eci.iagen.api_gateway.entity.Role;
+import com.eci.iagen.api_gateway.entity.User;
+import com.eci.iagen.api_gateway.repository.ClassRepository;
+import com.eci.iagen.api_gateway.repository.RoleRepository;
+import com.eci.iagen.api_gateway.repository.UserRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
@@ -306,20 +311,25 @@ public class ExcelImportService {
             return null;
 
         switch (cell.getCellType()) {
-            case STRING:
+            case STRING -> {
                 return cell.getStringCellValue().trim();
-            case NUMERIC:
+            }
+            case NUMERIC -> {
                 if (DateUtil.isCellDateFormatted(cell)) {
                     return cell.getDateCellValue().toString();
                 } else {
                     return String.valueOf((long) cell.getNumericCellValue());
                 }
-            case BOOLEAN:
+            }
+            case BOOLEAN -> {
                 return String.valueOf(cell.getBooleanCellValue());
-            case FORMULA:
+            }
+            case FORMULA -> {
                 return cell.getCellFormula();
-            default:
+            }
+            default -> {
                 return null;
+            }
         }
     }
 
@@ -342,28 +352,10 @@ public class ExcelImportService {
         return email + "@escuelaing.edu.co";
     }
 
-    @Transactional
-    private void addUserToTeam(User user, Team team) {
-        try {
-            // Verificar si el usuario ya está en el equipo
-            if (user.getTeams() != null && user.getTeams().contains(team)) {
-                log.debug("Usuario {} ya está en el equipo {}", user.getName(), team.getName());
-                return;
-            }
-
-            // Usar el método del repositorio para agregar la relación
-            userRepository.addUserTeamRelationship(user.getId(), team.getId());
-            log.debug("Relación agregada: Usuario {} -> Equipo {}", user.getName(), team.getName());
-
-        } catch (Exception e) {
-            log.error("Error agregando usuario {} al equipo {}: {}", user.getName(), team.getName(), e.getMessage(), e);
-        }
-    }
-
     // Clase auxiliar para resultado de creación de clase
     private static class ClassCreationResult {
-        private Class classEntity;
-        private boolean wasCreated;
+        private final Class classEntity;
+        private final boolean wasCreated;
 
         public ClassCreationResult(Class classEntity, boolean wasCreated) {
             this.classEntity = classEntity;
