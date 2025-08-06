@@ -1,13 +1,22 @@
 package com.eci.iagen.api_gateway.controller;
 
-import com.eci.iagen.api_gateway.dto.UserDTO;
-import com.eci.iagen.api_gateway.service.UserService;
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import com.eci.iagen.api_gateway.dto.UserDTO;
+import com.eci.iagen.api_gateway.service.UserService;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/users")
@@ -42,8 +51,8 @@ public class UserController {
     @PutMapping("/{id}")
     public ResponseEntity<UserDTO> updateUser(@PathVariable Long id, @RequestBody UserDTO userDTO) {
         try {
-            // Asegurar que el ID del path coincida con el DTO
-            userDTO.setId(id);
+            // NO establecer el ID del path en el DTO para evitar conflictos de Hibernate
+            // El servicio usará el ID del parámetro directamente
             
             // Validar que los campos obligatorios estén presentes
             if (userDTO.getName() == null || userDTO.getName().trim().isEmpty()) {
@@ -58,10 +67,8 @@ public class UserController {
                     .map(user -> ResponseEntity.ok(user))
                     .orElse(ResponseEntity.notFound().build());
         } catch (IllegalArgumentException e) {
-            e.printStackTrace(); // Mostrar la excepción en los logs
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
-            e.printStackTrace(); // Mostrar la excepción en los logs
             System.err.println("Error updating user: " + e.getMessage()); // Mensaje adicional en consola
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(null);

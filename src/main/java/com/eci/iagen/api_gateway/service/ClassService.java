@@ -1,5 +1,15 @@
 package com.eci.iagen.api_gateway.service;
 
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.eci.iagen.api_gateway.dto.ClassDTO;
 import com.eci.iagen.api_gateway.entity.Class;
 import com.eci.iagen.api_gateway.entity.Team;
@@ -7,16 +17,8 @@ import com.eci.iagen.api_gateway.entity.User;
 import com.eci.iagen.api_gateway.repository.ClassRepository;
 import com.eci.iagen.api_gateway.repository.TeamRepository;
 import com.eci.iagen.api_gateway.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +40,12 @@ public class ClassService {
         return classRepository.findByIdWithTeamsAndProfessor(id)
                 .map(this::convertToDTO);
     }
+
+    @Transactional(readOnly = true)
+    public Optional<ClassDTO> getClassByName(String name) {
+        return classRepository.findByName(name)
+                .map(this::convertToDTO);
+    }
     
     @Transactional
     public ClassDTO createClass(ClassDTO classDTO) {
@@ -47,11 +55,19 @@ public class ClassService {
 
         User professor = userRepository.findById(classDTO.getProfessorId())
                 .orElseThrow(() -> new IllegalArgumentException("Professor with id " + classDTO.getProfessorId() + " not found"));
+        
+        // Validar profesor de laboratorio si se proporciona
+        User laboratoryProfessor = null;
+        if (classDTO.getLaboratoryProfessorId() != null) {
+            laboratoryProfessor = userRepository.findById(classDTO.getLaboratoryProfessorId())
+                    .orElseThrow(() -> new IllegalArgumentException("Laboratory professor with id " + classDTO.getLaboratoryProfessorId() + " not found"));
+        }
 
         Class classEntity = new Class();
         classEntity.setName(classDTO.getName());
         classEntity.setDescription(classDTO.getDescription());
         classEntity.setProfessor(professor);
+        classEntity.setLaboratoryProfessor(laboratoryProfessor);
         classEntity.setSemester(classDTO.getSemester());
         classEntity.setCreatedAt(LocalDateTime.now());
 
@@ -76,10 +92,18 @@ public class ClassService {
 
                     User professor = userRepository.findById(classDTO.getProfessorId())
                             .orElseThrow(() -> new IllegalArgumentException("Professor with id " + classDTO.getProfessorId() + " not found"));
+                    
+                    // Validar profesor de laboratorio si se proporciona
+                    User laboratoryProfessor = null;
+                    if (classDTO.getLaboratoryProfessorId() != null) {
+                        laboratoryProfessor = userRepository.findById(classDTO.getLaboratoryProfessorId())
+                                .orElseThrow(() -> new IllegalArgumentException("Laboratory professor with id " + classDTO.getLaboratoryProfessorId() + " not found"));
+                    }
 
                     classEntity.setName(classDTO.getName());
                     classEntity.setDescription(classDTO.getDescription());
                     classEntity.setProfessor(professor);
+                    classEntity.setLaboratoryProfessor(laboratoryProfessor);
                     classEntity.setSemester(classDTO.getSemester());
 
                     Class savedClass = classRepository.save(classEntity);
@@ -148,6 +172,56 @@ public class ClassService {
         return convertToDTO(classEntity);
     }
 
+    /**
+     * Agrega un equipo específico a una clase
+     * 
+     * @param classId ID de la clase
+     * @param teamId ID del equipo a agregar
+     * @throws IllegalArgumentException si la clase o el equipo no existen, o si el equipo ya está en la clase
+     */
+    @Transactional
+    public void addTeamToClass(Long classId, Long teamId) {
+        Class classEntity = classRepository.findById(classId)
+                .orElseThrow(() -> new IllegalArgumentException("Class with id " + classId + " not found"));
+        
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new IllegalArgumentException("Team with id " + teamId + " not found"));
+        
+        // Verificar si el equipo ya está asignado a esta clase
+        if (classEntity.getTeams().contains(team)) {
+            throw new IllegalArgumentException("Team with id " + teamId + " is already assigned to class " + classId);
+        }
+        
+        // Agregar el equipo a la clase
+        classEntity.getTeams().add(team);
+        classRepository.save(classEntity);
+    }
+
+    /**
+     * Remueve un equipo específico de una clase
+     * 
+     * @param classId ID de la clase
+     * @param teamId ID del equipo a remover
+     * @throws IllegalArgumentException si la clase o el equipo no existen, o si el equipo no está en la clase
+     */
+    @Transactional
+    public void removeTeamFromClass(Long classId, Long teamId) {
+        Class classEntity = classRepository.findById(classId)
+                .orElseThrow(() -> new IllegalArgumentException("Class with id " + classId + " not found"));
+        
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new IllegalArgumentException("Team with id " + teamId + " not found"));
+        
+        // Verificar si el equipo está asignado a esta clase
+        if (!classEntity.getTeams().contains(team)) {
+            throw new IllegalArgumentException("Team with id " + teamId + " is not assigned to class " + classId);
+        }
+        
+        // Remover el equipo de la clase
+        classEntity.getTeams().remove(team);
+        classRepository.save(classEntity);
+    }
+
     private ClassDTO convertToDTO(Class classEntity) {
         return new ClassDTO(
                 classEntity.getId(),
@@ -155,6 +229,8 @@ public class ClassService {
                 classEntity.getDescription(),
                 classEntity.getProfessor().getId(),
                 classEntity.getProfessor().getName(),
+                classEntity.getLaboratoryProfessor() != null ? classEntity.getLaboratoryProfessor().getId() : null,
+                classEntity.getLaboratoryProfessor() != null ? classEntity.getLaboratoryProfessor().getName() : null,
                 classEntity.getCreatedAt(),
                 classEntity.getSemester(),
                 classEntity.getTeams().stream().map(Team::getId).collect(Collectors.toList()),

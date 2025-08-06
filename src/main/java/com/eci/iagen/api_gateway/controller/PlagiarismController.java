@@ -1,5 +1,18 @@
 package com.eci.iagen.api_gateway.controller;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.eci.iagen.api_gateway.client.JPlagServiceClient;
 import com.eci.iagen.api_gateway.dto.AssignmentDTO;
 import com.eci.iagen.api_gateway.dto.SubmissionDTO;
@@ -9,17 +22,11 @@ import com.eci.iagen.api_gateway.service.AssignmentService;
 import com.eci.iagen.api_gateway.service.SubmissionService;
 import com.eci.iagen.api_gateway.service.TeamService;
 import com.eci.iagen.api_gateway.service.UserService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.ArrayList;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/plagiarism")
@@ -90,7 +97,7 @@ public class PlagiarismController {
                                 log.info("Response JSON received from JPlag service:");
                                 log.info("{}", receivedJson);
                                 log.info("=== End Received Response ===");
-                        } catch (Exception jsonException) {
+                        } catch (JsonProcessingException jsonException) {
                                 log.warn("Error serializing received response to JSON for logging: {}",
                                                 jsonException.getMessage());
                                 log.info("Response body type: {}",
@@ -111,7 +118,7 @@ public class PlagiarismController {
                                         log.info("Transformed response JSON for frontend:");
                                         log.info("{}", transformedJson);
                                         log.info("=== End Transformed Response ===");
-                                } catch (Exception jsonException) {
+                                } catch (JsonProcessingException jsonException) {
                                         log.warn("Error serializing transformed response to JSON for logging: {}",
                                                         jsonException.getMessage());
                                 }
@@ -221,7 +228,7 @@ public class PlagiarismController {
                 List<String> memberNames = team.getUserIds().stream()
                                 .map(userId -> {
                                         UserDTO user = userService.getUserById(userId)
-                                                        .orElse(new UserDTO(userId, "Unknown User", "", null, ""));
+                                                        .orElse(new UserDTO(userId,"", "Unknown User", "", null, ""));
                                         return user.getName();
                                 })
                                 .collect(Collectors.toList());
