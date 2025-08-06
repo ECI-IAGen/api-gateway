@@ -1,6 +1,5 @@
 package com.eci.iagen.api_gateway.client;
 
-import com.eci.iagen.api_gateway.dto.jplag.JPlagDetectionRequestDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,6 +9,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
+
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -24,21 +25,21 @@ public class JPlagServiceClient {
     /**
      * Detecta plagio enviando datos al microservicio JPlag
      */
-    public ResponseEntity<Object> detectPlagiarism(JPlagDetectionRequestDTO request) {
+    public ResponseEntity<Object> detectPlagiarism(Map<String, Object> request) {
         try {
-            String url = jplagServiceUrl + "/api/jplag/detect";
-            
+            String url = jplagServiceUrl + "/api/plagiarism/analyze";
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            
-            HttpEntity<JPlagDetectionRequestDTO> entity = new HttpEntity<>(request, headers);
-            
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
+
             log.info("Sending plagiarism detection request to JPlag service: {}", url);
             ResponseEntity<Object> response = restTemplate.postForEntity(url, entity, Object.class);
-            
+
             log.info("Received response from JPlag service with status: {}", response.getStatusCode());
             return response;
-            
+
         } catch (Exception e) {
             log.error("Error communicating with JPlag service: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to communicate with JPlag service: " + e.getMessage());
@@ -47,26 +48,12 @@ public class JPlagServiceClient {
 
     /**
      * Obtiene comparaciones compactas del microservicio JPlag
+     * Como el servicio JPlag no tiene endpoint separado, usa el mismo endpoint de
+     * detección
      */
-    public ResponseEntity<Object> getCompactComparisons(JPlagDetectionRequestDTO request) {
-        try {
-            String url = jplagServiceUrl + "/api/jplag/comparisons";
-            
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            
-            HttpEntity<JPlagDetectionRequestDTO> entity = new HttpEntity<>(request, headers);
-            
-            log.info("Sending compact comparisons request to JPlag service: {}", url);
-            ResponseEntity<Object> response = restTemplate.postForEntity(url, entity, Object.class);
-            
-            log.info("Received compact comparisons from JPlag service with status: {}", response.getStatusCode());
-            return response;
-            
-        } catch (Exception e) {
-            log.error("Error getting compact comparisons from JPlag service: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to get compact comparisons from JPlag service: " + e.getMessage());
-        }
+    public ResponseEntity<Object> getCompactComparisons(Map<String, Object> request) {
+        // Reutilizar el mismo endpoint ya que JPlag service no tiene uno separado
+        return detectPlagiarism(request);
     }
 
     /**
@@ -74,7 +61,7 @@ public class JPlagServiceClient {
      */
     public ResponseEntity<String> checkHealth() {
         try {
-            String url = jplagServiceUrl + "/api/jplag/health";
+            String url = jplagServiceUrl + "/api/plagiarism/health";
             ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
             log.info("JPlag service health check: {}", response.getBody());
             return response;
