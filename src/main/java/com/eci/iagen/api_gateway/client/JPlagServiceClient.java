@@ -62,9 +62,18 @@ public class JPlagServiceClient {
     public ResponseEntity<String> checkHealth() {
         try {
             String url = jplagServiceUrl + "/api/plagiarism/health";
-            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                url, 
+                org.springframework.http.HttpMethod.GET, 
+                null, 
+                new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {}
+            );
             log.info("JPlag service health check: {}", response.getBody());
-            return response;
+            
+            // Convertir el Map a JSON String para mantener compatibilidad
+            Map<String, Object> body = response.getBody();
+            String jsonResponse = "{\"status\":\"" + body.get("status") + "\",\"service\":\"" + body.get("service") + "\"}";
+            return ResponseEntity.status(response.getStatusCode()).body(jsonResponse);
         } catch (Exception e) {
             log.error("JPlag service health check failed: {}", e.getMessage());
             throw new RuntimeException("JPlag service is not available: " + e.getMessage());

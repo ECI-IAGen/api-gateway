@@ -157,12 +157,53 @@ public class PlagiarismController {
          * Verifica el estado del microservicio JPlag
          */
         @GetMapping("/health")
-        public ResponseEntity<String> checkJPlagHealth() {
+        public ResponseEntity<Object> checkJPlagHealth() {
                 try {
-                        return jplagServiceClient.checkHealth();
+                        ResponseEntity<String> healthResponse = jplagServiceClient.checkHealth();
+                        // Parse the JSON string to return as Object for frontend compatibility
+                        try {
+                                Object parsedResponse = objectMapper.readValue(healthResponse.getBody(), Object.class);
+                                return ResponseEntity.status(healthResponse.getStatusCode()).body(parsedResponse);
+                        } catch (Exception parseException) {
+                                log.warn("Failed to parse health response JSON, returning as string: {}", parseException.getMessage());
+                                return ResponseEntity.status(healthResponse.getStatusCode()).body(healthResponse.getBody());
+                        }
                 } catch (Exception e) {
-                        return ResponseEntity.internalServerError()
-                                        .body("JPlag service is not available: " + e.getMessage());
+                        Map<String, String> errorResponse = new HashMap<>();
+                        errorResponse.put("status", "DOWN");
+                        errorResponse.put("service", "jplag-service");
+                        errorResponse.put("error", "JPlag service is not available: " + e.getMessage());
+                        return ResponseEntity.internalServerError().body(errorResponse);
+                }
+        }
+
+        /**
+         * Endpoint de health check compatible con el frontend
+         * Mapea /api/jplag/health para compatibilidad con Angular
+         */
+        @GetMapping("/jplag/health")
+        public ResponseEntity<Object> checkJPlagHealthCompat() {
+                log.info("Health check requested via compatibility endpoint /api/jplag/health");
+                try {
+                        ResponseEntity<String> healthResponse = jplagServiceClient.checkHealth();
+                        log.info("JPlag health check response: status={}, body={}", 
+                                healthResponse.getStatusCode(), healthResponse.getBody());
+                        
+                        // Parse the JSON string to return as Object for frontend compatibility
+                        try {
+                                Object parsedResponse = objectMapper.readValue(healthResponse.getBody(), Object.class);
+                                return ResponseEntity.status(healthResponse.getStatusCode()).body(parsedResponse);
+                        } catch (Exception parseException) {
+                                log.warn("Failed to parse health response JSON, returning as string: {}", parseException.getMessage());
+                                return ResponseEntity.status(healthResponse.getStatusCode()).body(healthResponse.getBody());
+                        }
+                } catch (Exception e) {
+                        log.error("JPlag service health check failed: {}", e.getMessage());
+                        Map<String, String> errorResponse = new HashMap<>();
+                        errorResponse.put("status", "DOWN");
+                        errorResponse.put("service", "jplag-service");
+                        errorResponse.put("error", "JPlag service is not available: " + e.getMessage());
+                        return ResponseEntity.internalServerError().body(errorResponse);
                 }
         }
 
