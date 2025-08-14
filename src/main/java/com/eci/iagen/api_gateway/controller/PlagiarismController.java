@@ -100,9 +100,9 @@ public class PlagiarismController {
                         } catch (JsonProcessingException jsonException) {
                                 log.warn("Error serializing received response to JSON for logging: {}",
                                                 jsonException.getMessage());
+                                Object responseBody = jplagResponse.getBody();
                                 log.info("Response body type: {}",
-                                                jplagResponse.getBody() != null ? jplagResponse.getBody().getClass()
-                                                                : "null");
+                                                responseBody != null ? responseBody.getClass() : "null");
                                 log.info("Response body toString: {}", jplagResponse.getBody());
                         }
 
@@ -171,7 +171,7 @@ public class PlagiarismController {
                         try {
                                 Object parsedResponse = objectMapper.readValue(healthResponse.getBody(), Object.class);
                                 return ResponseEntity.status(healthResponse.getStatusCode()).body(parsedResponse);
-                        } catch (Exception parseException) {
+                        } catch (JsonProcessingException parseException) {
                                 log.warn("Failed to parse health response JSON, returning as string: {}", parseException.getMessage());
                                 return ResponseEntity.status(healthResponse.getStatusCode()).body(healthResponse.getBody());
                         }
@@ -200,7 +200,7 @@ public class PlagiarismController {
                         try {
                                 Object parsedResponse = objectMapper.readValue(healthResponse.getBody(), Object.class);
                                 return ResponseEntity.status(healthResponse.getStatusCode()).body(parsedResponse);
-                        } catch (Exception parseException) {
+                        } catch (JsonProcessingException parseException) {
                                 log.warn("Failed to parse health response JSON, returning as string: {}", parseException.getMessage());
                                 return ResponseEntity.status(healthResponse.getStatusCode()).body(healthResponse.getBody());
                         }

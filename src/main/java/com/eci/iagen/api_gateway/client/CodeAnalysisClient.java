@@ -1,9 +1,5 @@
 package com.eci.iagen.api_gateway.client;
 
-import com.eci.iagen.api_gateway.dto.EvaluationDTO;
-import com.eci.iagen.api_gateway.dto.SubmissionDTO;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -11,7 +7,14 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+
+import com.eci.iagen.api_gateway.dto.EvaluationDTO;
+import com.eci.iagen.api_gateway.dto.SubmissionDTO;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Component
 @RequiredArgsConstructor
@@ -47,7 +50,7 @@ public class CodeAnalysisClient {
             log.info("LLM analysis completed successfully for submission {}", submissionDTO.getId());
             return response.getBody();
             
-        } catch (Exception e) {
+        } catch (RestClientException e) {
             log.error("Error calling LLM analysis service for submission {}: {}", 
                      submissionDTO.getId(), e.getMessage(), e);
             throw new RuntimeException("Error performing LLM analysis: " + e.getMessage(), e);
@@ -78,7 +81,7 @@ public class CodeAnalysisClient {
             log.info("Checkstyle analysis completed successfully for submission {}", submissionDTO.getId());
             return response.getBody();
             
-        } catch (Exception e) {
+        } catch (RestClientException e) {
             log.error("Error calling Checkstyle analysis service for submission {}: {}", 
                      submissionDTO.getId(), e.getMessage(), e);
             throw new RuntimeException("Error performing Checkstyle analysis: " + e.getMessage(), e);
@@ -94,7 +97,7 @@ public class CodeAnalysisClient {
         try {
             ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
             return response.getStatusCode().is2xxSuccessful();
-        } catch (Exception e) {
+        } catch (RestClientException e) {
             log.warn("Code analysis service is not available: {}", e.getMessage());
             return false;
         }
