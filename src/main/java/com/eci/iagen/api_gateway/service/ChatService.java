@@ -73,8 +73,7 @@ public class ChatService {
     }
     
     public void handleLLMStreamingUpdate(String sessionId, String partialMessage, String status, boolean isComplete) {
-        log.debug("Received LLM update for session {}: status={}, isComplete={}", sessionId, status, isComplete);
-        
+
         ChatMessageResponse response = ChatMessageResponse.assistantMessage(
             sessionId, 
             partialMessage, 
@@ -87,6 +86,5 @@ public class ChatService {
     private void sendMessageToSession(String sessionId, ChatMessageResponse message) {
         String destination = "/topic/chat/" + sessionId;
         messagingTemplate.convertAndSend(destination, message);
-        log.debug("Message sent to {}: {}", destination, message.getMessage());
     }
 }

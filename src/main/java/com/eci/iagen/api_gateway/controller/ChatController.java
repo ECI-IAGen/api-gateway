@@ -62,6 +62,10 @@ public class ChatController {
                 log.warn("No session ID in LLM update");
                 return ResponseEntity.badRequest().body("Session ID is required");
             }
+            log.info("Processing LLM update for session: {}", request.getSessionId());
+            log.info("Partial message: {}", request.getPartialMessage());
+            log.info("Status: {}", request.getStatus());
+            log.info("Is complete: {}", request.isComplete());
 
             chatService.handleLLMStreamingUpdate(
                 request.getSessionId(),
