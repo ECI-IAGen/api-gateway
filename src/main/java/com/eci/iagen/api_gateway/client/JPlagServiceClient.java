@@ -3,6 +3,7 @@ package com.eci.iagen.api_gateway.client;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -78,5 +79,69 @@ public class JPlagServiceClient {
             log.error("JPlag service health check failed: {}", e.getMessage());
             throw new RuntimeException("JPlag service is not available: " + e.getMessage());
         }
+    }
+
+    /**
+     * Obtiene información del HTML de una comparación específica
+     */
+    public ResponseEntity<Object> getComparisonHtml(String sessionId, Long submissionId1, Long submissionId2) {
+        try {
+            String url = jplagServiceUrl + "/api/plagiarism/comparison/" + sessionId + "/" + submissionId1 + "-" + submissionId2;
+            
+            log.info("Requesting comparison HTML info from JPlag service: {}", url);
+            ResponseEntity<Object> response = restTemplate.getForEntity(url, Object.class);
+            
+            log.info("Received comparison HTML info from JPlag service with status: {}", response.getStatusCode());
+            return response;
+            
+        } catch (Exception e) {
+            log.error("Error getting comparison HTML info from JPlag service: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to get comparison HTML info from JPlag service: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Obtiene el archivo HTML de una comparación específica
+     */
+    public ResponseEntity<Resource> getComparisonHtml(String sessionId, String comparisonId) {
+        try {
+            String url = jplagServiceUrl + "/reports/comparison/" + sessionId + "/" + comparisonId + ".html";
+            
+            log.info("Requesting comparison HTML file from JPlag service: {}", url);
+            ResponseEntity<Resource> response = restTemplate.getForEntity(url, Resource.class);
+            
+            log.info("Received comparison HTML file from JPlag service with status: {}", response.getStatusCode());
+            return response;
+            
+        } catch (Exception e) {
+            log.error("Error getting comparison HTML file from JPlag service: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to get comparison HTML file from JPlag service: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Lista todas las comparaciones disponibles para una sesión
+     */
+    public ResponseEntity<Object> listComparisons(String sessionId) {
+        try {
+            String url = jplagServiceUrl + "/reports/comparison/" + sessionId + "/list";
+            
+            log.info("Requesting comparison list from JPlag service: {}", url);
+            ResponseEntity<Object> response = restTemplate.getForEntity(url, Object.class);
+            
+            log.info("Received comparison list from JPlag service with status: {}", response.getStatusCode());
+            return response;
+            
+        } catch (Exception e) {
+            log.error("Error getting comparison list from JPlag service: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to get comparison list from JPlag service: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Obtiene la URL base del servicio JPlag para construir URLs completas
+     */
+    public String getBaseUrl() {
+        return jplagServiceUrl;
     }
 }
