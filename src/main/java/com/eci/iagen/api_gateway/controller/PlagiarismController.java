@@ -100,9 +100,9 @@ public class PlagiarismController {
                         } catch (JsonProcessingException jsonException) {
                                 log.warn("Error serializing received response to JSON for logging: {}",
                                                 jsonException.getMessage());
+                                Object responseBody = jplagResponse.getBody();
                                 log.info("Response body type: {}",
-                                                jplagResponse.getBody() != null ? jplagResponse.getBody().getClass()
-                                                                : "null");
+                                                responseBody != null ? responseBody.getClass() : "null");
                                 log.info("Response body toString: {}", jplagResponse.getBody());
                         }
 
@@ -171,7 +171,7 @@ public class PlagiarismController {
                         try {
                                 Object parsedResponse = objectMapper.readValue(healthResponse.getBody(), Object.class);
                                 return ResponseEntity.status(healthResponse.getStatusCode()).body(parsedResponse);
-                        } catch (Exception parseException) {
+                        } catch (JsonProcessingException parseException) {
                                 log.warn("Failed to parse health response JSON, returning as string: {}", parseException.getMessage());
                                 return ResponseEntity.status(healthResponse.getStatusCode()).body(healthResponse.getBody());
                         }
@@ -200,7 +200,7 @@ public class PlagiarismController {
                         try {
                                 Object parsedResponse = objectMapper.readValue(healthResponse.getBody(), Object.class);
                                 return ResponseEntity.status(healthResponse.getStatusCode()).body(parsedResponse);
-                        } catch (Exception parseException) {
+                        } catch (JsonProcessingException parseException) {
                                 log.warn("Failed to parse health response JSON, returning as string: {}", parseException.getMessage());
                                 return ResponseEntity.status(healthResponse.getStatusCode()).body(healthResponse.getBody());
                         }
@@ -343,5 +343,95 @@ public class PlagiarismController {
                                 lowerUrl.startsWith("git@gitlab.com:") ||
                                 lowerUrl.endsWith(".git") ||
                                 lowerUrl.contains("git");
+        }
+
+        /**
+         * Obtiene el HTML de una comparación específica entre dos submissions
+         */
+        @GetMapping("/comparison/{sessionId}/{submissionId1}-{submissionId2}")
+        public ResponseEntity<Object> getComparisonHtml(
+                @PathVariable String sessionId,
+                @PathVariable Long submissionId1,
+                @PathVariable Long submissionId2) {
+            
+            log.info("Request for comparison HTML: session={}, submission1={}, submission2={}", 
+                    sessionId, submissionId1, submissionId2);
+
+            try {
+                // Llamar al JPlag Service para obtener la información del HTML
+                ResponseEntity<Object> jplagResponse = jplagServiceClient.getComparisonHtml(sessionId, submissionId1, submissionId2);
+
+                if (jplagResponse.getStatusCode().is2xxSuccessful() && jplagResponse.getBody() != null) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> responseBody = (Map<String, Object>) jplagResponse.getBody();
+                    
+                    // Enriquecer la respuesta con información de las submissions
+                    try {
+                        // Obtener información de las submissions para enriquecer la respuesta
+                        SubmissionDTO submission1 = submissionService.getSubmissionById(submissionId1).orElse(null);
+                        SubmissionDTO submission2 = submissionService.getSubmissionById(submissionId2).orElse(null);
+
+                        if (submission1 != null && submission2 != null) {
+                            // Agregar información de los equipos
+                            TeamDTO team1 = teamService.getTeamById(submission1.getTeamId()).orElse(null);
+                            TeamDTO team2 = teamService.getTeamById(submission2.getTeamId()).orElse(null);
+
+                            Map<String, Object> enrichedResponse = new HashMap<>(responseBody);
+                            
+                            // Información del equipo 1
+                            Map<String, Object> team1Info = new HashMap<>();
+                            team1Info.put("teamId", submission1.getTeamId());
+                            team1Info.put("teamName", team1 != null ? team1.getName() : "Unknown Team");
+                            team1Info.put("repositoryUrl", submission1.getFileUrl());
+                            team1Info.put("assignmentId", submission1.getAssignmentId());
+                            enrichedResponse.put("team1", team1Info);
+
+                            // Información del equipo 2
+                            Map<String, Object> team2Info = new HashMap<>();
+                            team2Info.put("teamId", submission2.getTeamId());
+                            team2Info.put("teamName", team2 != null ? team2.getName() : "Unknown Team");
+                            team2Info.put("repositoryUrl", submission2.getFileUrl());
+                            team2Info.put("assignmentId", submission2.getAssignmentId());
+                            enrichedResponse.put("team2", team2Info);
+
+                            // Construir URL completa si existe
+                            if (responseBody.get("htmlUrl") != null) {
+                                String htmlUrl = responseBody.get("htmlUrl").toString();
+                                // Construir URL completa hacia el JPlag Service
+                                String baseUrl = "http://localhost:8082"; // TODO: hacer configurable
+                                String fullHtmlUrl = baseUrl + htmlUrl;
+                                enrichedResponse.put("fullHtmlUrl", fullHtmlUrl);
+                            }
+
+                            log.info("Comparison HTML info retrieved successfully for session {} and submissions {}-{}", 
+                                    sessionId, submissionId1, submissionId2);
+                            return ResponseEntity.ok(enrichedResponse);
+                        } else {
+                            log.warn("Could not find submission info for submissions {}-{}", submissionId1, submissionId2);
+                            return ResponseEntity.ok(responseBody);
+                        }
+                    } catch (Exception enrichmentError) {
+                        log.warn("Could not enrich response with submission info: {}", enrichmentError.getMessage());
+                        return ResponseEntity.ok(responseBody);
+                    }
+                } else {
+                    log.warn("JPlag service returned error for comparison HTML: session={}, submissions={}-{}", 
+                            sessionId, submissionId1, submissionId2);
+                    return ResponseEntity.status(jplagResponse.getStatusCode()).body(jplagResponse.getBody());
+                }
+
+            } catch (Exception e) {
+                log.error("Error getting comparison HTML for session {} and submissions {}-{}: {}", 
+                         sessionId, submissionId1, submissionId2, e.getMessage(), e);
+                
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "Error al obtener comparación HTML: " + e.getMessage());
+                errorResponse.put("sessionId", sessionId);
+                errorResponse.put("submissionId1", submissionId1);
+                errorResponse.put("submissionId2", submissionId2);
+
+                return ResponseEntity.internalServerError().body(errorResponse);
+            }
         }
 }

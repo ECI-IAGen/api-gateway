@@ -511,7 +511,7 @@ public class ExcelFormatCompleteImportService {
             String grupo = getCellValueAsString(row.getCell(0));       // Columna A
             String id = getCellValueAsString(row.getCell(1));          // Columna B
             String nombre = getCellValueAsString(row.getCell(2));      // Columna C
-            String programa = getCellValueAsString(row.getCell(3));    // Columna D
+            // String programa = getCellValueAsString(row.getCell(3));    // Columna D
             String correo = getCellValueAsString(row.getCell(4));      // Columna E
 
             // Validar campos obligatorios
@@ -520,7 +520,7 @@ public class ExcelFormatCompleteImportService {
                 return null;
             }
 
-            return new StudentData(grupo, id, nombre, programa, correo);
+            return new StudentData(grupo, id, nombre, correo);
 
         } catch (Exception e) {
             log.error("Error extrayendo datos de la fila {} de 'Estudiantes'", rowNumber, e);
@@ -686,7 +686,7 @@ public class ExcelFormatCompleteImportService {
         try {
             String grupo = getCellValueAsString(row.getCell(0));       // Columna A
             String equipo = getCellValueAsString(row.getCell(1));      // Columna B
-            String activo = getCellValueAsString(row.getCell(2));      // Columna C
+            // String activo = getCellValueAsString(row.getCell(2));      // Columna C
 
             // Validar campos obligatorios
             if (isNullOrEmpty(grupo) || isNullOrEmpty(equipo)) {
@@ -694,7 +694,7 @@ public class ExcelFormatCompleteImportService {
                 return null;
             }
 
-            return new TeamData(grupo, equipo, activo);
+            return new TeamData(grupo, equipo);
 
         } catch (Exception e) {
             log.error("Error extrayendo datos de la fila {} de 'Equipos'", rowNumber, e);
@@ -1216,14 +1216,12 @@ public class ExcelFormatCompleteImportService {
         private final String grupo;
         private final String id;
         private final String nombre;
-        private final String programa;
         private final String correo;
 
-        public StudentData(String grupo, String id, String nombre, String programa, String correo) {
+        public StudentData(String grupo, String id, String nombre, String correo) {
             this.grupo = grupo;
             this.id = id;
             this.nombre = nombre;
-            this.programa = programa;
             this.correo = correo;
         }
 
@@ -1231,7 +1229,6 @@ public class ExcelFormatCompleteImportService {
         public String getGrupo() { return grupo; }
         public String getId() { return id; }
         public String getNombre() { return nombre; }
-        public String getPrograma() { return programa; }
         public String getCorreo() { return correo; }
     }
 
@@ -1241,17 +1238,14 @@ public class ExcelFormatCompleteImportService {
     private static class TeamData {
         private final String grupo;
         private final String equipo;
-        private final String activo;
 
-        public TeamData(String grupo, String equipo, String activo) {
+        public TeamData(String grupo, String equipo) {
             this.grupo = grupo;
             this.equipo = equipo;
-            this.activo = activo;
         }
 
         // Getters
         public String getGrupo() { return grupo; }
         public String getEquipo() { return equipo; }
-        public String getActivo() { return activo; }
     }
 }

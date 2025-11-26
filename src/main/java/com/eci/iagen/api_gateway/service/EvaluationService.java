@@ -195,7 +195,7 @@ public class EvaluationService {
         Evaluation evaluation = new Evaluation();
         evaluation.setSubmission(submission);
         evaluation.setEvaluator(evaluator);
-        evaluation.setEvaluationType("AUTOMATIC");
+        evaluation.setEvaluationType("SCHEDULER_GITHUB");
         evaluation.setScore(complianceResponse.getPenalizedScore());
         evaluation.setCriteriaJson(complianceResponse.getEvaluationCriteria());
         evaluation.setCreatedAt(LocalDateTime.now());
@@ -205,7 +205,7 @@ public class EvaluationService {
     }
 
     @Transactional
-    public EvaluationDTO evaluateGoodPractices(Long submissionId, Long evaluatorId, boolean usingIA) {
+    public EvaluationDTO evaluateGoodPractices(Long submissionId, Long evaluatorId, boolean usingIA) throws RuntimeException {
         logger.info("Evaluating good practices for submission {} by evaluator {} using {}",
                    submissionId, evaluatorId, usingIA ? "LLM Analysis" : "Checkstyle Analysis");
 
@@ -242,34 +242,7 @@ public class EvaluationService {
             return convertToDTO(savedEvaluation);
             
         } catch (Exception e) {
-            log.error("Error calling external code analysis service for submission {}: {}", 
-                     submissionId, e.getMessage(), e);
-            
-            // Fallback: crear una evaluación de error
-            Evaluation evaluation = new Evaluation();
-            evaluation.setSubmission(submission);
-            evaluation.setEvaluator(evaluator);
-            evaluation.setEvaluationType(usingIA ? "GOOD_PRACTICES_LLM_ERROR" : "GOOD_PRACTICES_CHECKSTYLE_ERROR");
-            evaluation.setScore(BigDecimal.valueOf(0.0));
-            
-            // Criteria JSON con información del error
-            Map<String, Object> criteria = new LinkedHashMap<>();
-            criteria.put("evaluationMethod", usingIA ? "LLM Analysis (Failed)" : "Checkstyle Analysis (Failed)");
-            criteria.put("status", "ERROR");
-            criteria.put("error", e.getMessage());
-            criteria.put("evaluationDate", LocalDateTime.now().toString());
-            
-            try {
-                String criteriaJson = new ObjectMapper().writeValueAsString(criteria);
-                evaluation.setCriteriaJson(criteriaJson);
-            } catch (JsonProcessingException jsonE) {
-                evaluation.setCriteriaJson("{\"error\":\"Could not generate criteria JSON\"}");
-            }
-            
-            evaluation.setCreatedAt(LocalDateTime.now());
-
-            Evaluation savedEvaluation = evaluationRepository.save(evaluation);
-            return convertToDTO(savedEvaluation);
+            throw new RuntimeException("Error evaluating good practices: " + e.getMessage(), e);
         }
     }
 
