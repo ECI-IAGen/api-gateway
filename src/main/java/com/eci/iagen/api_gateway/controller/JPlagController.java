@@ -4,6 +4,7 @@ import com.eci.iagen.api_gateway.client.JPlagServiceClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -68,6 +69,47 @@ public class JPlagController {
             log.error("Error in JPlag plagiarism detection: {}", e.getMessage(), e);
             Map<String, String> errorResponse = new HashMap<>();
             errorResponse.put("error", "Plagiarism detection failed: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
+    }
+
+    /**
+     * Sirve archivos HTML individuales de comparación
+     * Ruta: GET /api/jplag/reports/comparison/{sessionId}/{comparisonId}.html
+     */
+    @GetMapping("/reports/comparison/{sessionId}/{comparisonId}.html")
+    public ResponseEntity<Resource> getComparisonReport(
+            @PathVariable String sessionId,
+            @PathVariable String comparisonId) {
+        log.info("Comparison HTML requested for session: {} and comparison: {}", sessionId, comparisonId);
+        try {
+            ResponseEntity<Resource> response = jplagServiceClient.getComparisonHtml(sessionId, comparisonId);
+            log.info("Comparison HTML response: status={}, hasBody={}", 
+                    response.getStatusCode(), response.hasBody());
+            return response;
+        } catch (Exception e) {
+            log.error("Error serving comparison HTML for session {} and comparison {}: {}", 
+                     sessionId, comparisonId, e.getMessage(), e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Lista todas las comparaciones disponibles para una sesión
+     * Ruta: GET /api/jplag/reports/comparison/{sessionId}/list
+     */
+    @GetMapping("/reports/comparison/{sessionId}/list")
+    public ResponseEntity<Object> listComparisons(@PathVariable String sessionId) {
+        log.info("Comparison list requested for session: {}", sessionId);
+        try {
+            ResponseEntity<Object> response = jplagServiceClient.listComparisons(sessionId);
+            log.info("Comparison list response: status={}, hasBody={}", 
+                    response.getStatusCode(), response.hasBody());
+            return response;
+        } catch (Exception e) {
+            log.error("Error listing comparisons for session {}: {}", sessionId, e.getMessage(), e);
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to list comparisons: " + e.getMessage());
             return ResponseEntity.internalServerError().body(errorResponse);
         }
     }
